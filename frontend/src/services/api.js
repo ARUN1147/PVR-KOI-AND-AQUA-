@@ -1,8 +1,23 @@
 import axios from 'axios';
 
+// API Service Layer - Refreshed to resolve HMR conflicts
 const api = axios.create({
     baseURL: '/api',
 });
+
+// Add a request interceptor to include the auth token
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 // Auth
 export const login = (credentials) => api.post('/auth/login', credentials);
@@ -10,6 +25,8 @@ export const login = (credentials) => api.post('/auth/login', credentials);
 // Customers
 export const getCustomers = () => api.get('/customers');
 export const createCustomer = (data) => api.post('/customers', data);
+export const updateCustomer = (id, data) => api.patch(`/customers/${id}`, data);
+export const deleteCustomer = (id) => api.delete(`/customers/${id}`);
 
 // Products / Stock
 export const getProducts = () => api.get('/products');
@@ -21,6 +38,8 @@ export const updateStock = (id, data) => api.patch(`/products/${id}/stock`, data
 // Complaints
 export const getComplaints = () => api.get('/complaints');
 export const createComplaint = (data) => api.post('/complaints', data);
+export const updateComplaint = (id, data) => api.put(`/complaints/${id}`, data);
+export const deleteComplaint = (id) => api.delete(`/complaints/${id}`);
 export const updateComplaintStatus = (id, status) => api.patch(`/complaints/${id}/status`, { status });
 
 // Orders / Enquiries
@@ -49,5 +68,38 @@ export const createEmployee = (data) => api.post('/employees', data);
 export const updateEmployee = (id, data) => api.put(`/employees/${id}`, data);
 export const deleteEmployee = (id) => api.delete(`/employees/${id}`);
 
-export default api;
+// Koi Centre Services
+export const getKoiEnquiries = () => api.get('/koi/enquiries');
+export const createKoiEnquiry = (data) => api.post('/koi/enquiries', data);
+export const updateKoiEnquiryStatus = (id, status) => api.patch(`/koi/enquiries/${id}/status`, { status });
+export const deleteKoiEnquiry = (id) => api.delete(`/koi/enquiries/${id}`);
 
+export const getKoiOrders = () => api.get('/koi/orders');
+export const createKoiOrder = (data) => api.post('/koi/orders', data);
+export const updateKoiOrderStatus = (id, data) => api.patch(`/koi/orders/${id}/status`, data);
+
+export const getKoiInvoices = () => api.get('/koi/invoices');
+export const createKoiInvoice = (data) => api.post('/koi/invoices', data);
+export const getKoiInvoiceById = (id) => api.get(`/koi/invoices/${id}`);
+
+export const getKoiPayments = () => api.get('/koi/payments');
+export const createKoiPayment = (data) => api.post('/koi/payments', data);
+export const getPendingKoiPayments = () => api.get('/koi/payments/pending');
+
+export const getKoiStock = () => api.get('/koi/inventory');
+export const addKoiStock = (data) => api.post('/koi/inventory', data);
+export const updateKoiStock = (id, data) => api.patch(`/koi/inventory/${id}`, data);
+export const getLowKoiStock = () => api.get('/koi/inventory/low-stock');
+
+export const getKoiCustomers = () => api.get('/koi/customers');
+export const createKoiCustomer = (data) => api.post('/koi/customers', data);
+export const getKoiCustomerById = (id) => api.get(`/koi/customers/${id}`);
+export const updateKoiCustomer = (id, data) => api.patch(`/koi/customers/${id}`, data);
+
+// User Management (Boss Only)
+export const getUsers = () => api.get('/users');
+export const createUser = (data) => api.post('/users', data);
+export const updateUser = (id, data) => api.put(`/users/${id}`, data);
+export const deleteUser = (id) => api.delete(`/users/${id}`);
+
+export default api;

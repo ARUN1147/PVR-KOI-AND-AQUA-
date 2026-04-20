@@ -17,6 +17,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/customers', require('./routes/customerRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
@@ -24,6 +25,15 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/complaints', require('./routes/complaintRoutes'));
 app.use('/api/services', require('./routes/serviceRoutes'));
 app.use('/api/employees', require('./routes/employeeRoutes'));
+
+// Koi Centre Routes
+const { protect, authorize } = require('./middleware/authMiddleware');
+app.use('/api/koi/enquiries', protect, authorize('admin', 'KOI_MANAGER', 'STAFF', 'BRANCH_MANAGER'), require('./routes/koiEnquiryRoutes'));
+app.use('/api/koi/orders', protect, authorize('admin', 'KOI_MANAGER', 'STAFF', 'BRANCH_MANAGER'), require('./routes/koiOrderRoutes'));
+app.use('/api/koi/invoices', protect, authorize('admin', 'KOI_MANAGER', 'STAFF', 'BRANCH_MANAGER'), require('./routes/koiInvoiceRoutes'));
+app.use('/api/koi/payments', protect, authorize('admin', 'KOI_MANAGER', 'STAFF', 'BRANCH_MANAGER'), require('./routes/koiPaymentRoutes'));
+app.use('/api/koi/inventory', protect, authorize('admin', 'KOI_MANAGER', 'STAFF', 'BRANCH_MANAGER'), require('./routes/koiInventoryRoutes'));
+app.use('/api/koi/customers', protect, authorize('admin', 'KOI_MANAGER', 'STAFF', 'BRANCH_MANAGER'), require('./routes/koiCustomerRoutes'));
 
 
 // Database Connection

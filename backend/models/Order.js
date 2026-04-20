@@ -19,7 +19,12 @@ const orderSchema = new mongoose.Schema({
     autoCADFiles: [String],
     siteImages: [String],
     invoiceId: String,
-    isAdvancePaid: { type: Boolean, default: false }
+    isAdvancePaid: { type: Boolean, default: false },
+    taxPhase: {
+        type: String,
+        enum: ['Inside TN', 'Outside TN'],
+        default: 'Inside TN'
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -9,7 +9,8 @@ const productSchema = new mongoose.Schema({
     minStock: { type: Number, default: 5 },
     lowStockThreshold: { type: Number, default: 5 },
 
-    unit: { type: String, default: 'pcs' }
+    unit: { type: String, default: 'pcs' },
+    hsnSac: { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

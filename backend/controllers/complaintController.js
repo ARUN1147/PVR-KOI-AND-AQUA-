@@ -43,3 +43,21 @@ exports.updateComplaintStatus = async (req, res) => {
         res.status(400).json({ message: err.message });
     }
 };
+
+exports.updateComplaint = async (req, res) => {
+    try {
+        const complaint = await Complaint.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(complaint);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+};
+
+exports.deleteComplaint = async (req, res) => {
+    try {
+        await Complaint.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Complaint deleted' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
