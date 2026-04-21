@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -40,8 +40,28 @@ const BossLayout = () => {
     const location = useLocation();
     const role = localStorage.getItem('role');
 
+    const [activeModule, setActiveModule] = useState(() => {
+        if (location.pathname.startsWith('/koi')) return 'KOI';
+        if (['/boss-dashboard', '/boss/users', '/boss/reports'].includes(location.pathname)) return 'MASTER';
+        return 'AQUA';
+    });
+
+    useEffect(() => {
+        if (location.pathname.startsWith('/koi')) {
+            setActiveModule('KOI');
+        } else if (['/boss-dashboard', '/boss/users', '/boss/reports'].includes(location.pathname)) {
+            setActiveModule('MASTER');
+        } else if (location.pathname === '/' || location.pathname.startsWith('/boss/')) {
+            // Check if it's an aqua path (excluding users/reports which are MASTER)
+            if (!['/boss/users', '/boss/reports'].includes(location.pathname)) {
+                setActiveModule('AQUA');
+            }
+        }
+    }, [location.pathname]);
+
     const sections = [
         {
+            id: 'MASTER',
             title: 'Master Control',
             items: [
                 { icon: Shield, label: 'Boss Dashboard', path: '/boss-dashboard', color: 'bg-indigo-600' },
@@ -50,6 +70,7 @@ const BossLayout = () => {
             ]
         },
         {
+            id: 'AQUA',
             title: 'Aqua Management',
             items: [
                 { icon: LayoutDashboard, label: 'Aqua Stats', path: '/', color: 'bg-primary-600' },
@@ -64,6 +85,7 @@ const BossLayout = () => {
             ]
         },
         {
+            id: 'KOI',
             title: 'Koi Centre',
             items: [
                 { icon: Fish, label: 'Koi Dashboard', path: '/koi/dashboard', color: 'bg-orange-600' },
@@ -76,6 +98,8 @@ const BossLayout = () => {
             ]
         }
     ];
+
+    const filteredSections = sections.filter(section => section.id === activeModule);
 
     const handleLogout = () => {
         localStorage.removeItem('isAuthenticated');
@@ -99,7 +123,7 @@ const BossLayout = () => {
                 </div>
 
                 <nav className="flex-1 px-4 space-y-6 mt-4 overflow-y-auto custom-scrollbar">
-                    {sections.map((section, idx) => (
+                    {filteredSections.map((section, idx) => (
                         <div key={idx} className="space-y-2">
                             {!collapsed && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-4">{section.title}</p>}
                             {section.items.map((item) => (
@@ -125,9 +149,44 @@ const BossLayout = () => {
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 z-20">
-                    <button onClick={() => setCollapsed(!collapsed)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
-                        {collapsed ? <Menu size={20} /> : <X size={20} />}
-                    </button>
+                    <div className="flex items-center gap-6">
+                        <button onClick={() => setCollapsed(!collapsed)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+                            {collapsed ? <Menu size={20} /> : <X size={20} />}
+                        </button>
+
+                        <div className="hidden md:flex items-center gap-2 bg-gray-100/50 p-1 rounded-2xl border border-gray-100">
+                            <button
+                                onClick={() => setActiveModule('MASTER')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${activeModule === 'MASTER'
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                <Shield size={16} />
+                                <span className="font-bold text-xs">MASTER</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveModule('AQUA')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${activeModule === 'AQUA'
+                                    ? 'bg-primary-600 text-white shadow-md'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                <Droplets size={16} />
+                                <span className="font-bold text-xs">AQUA</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveModule('KOI')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${activeModule === 'KOI'
+                                    ? 'bg-orange-600 text-white shadow-md'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                <Fish size={16} />
+                                <span className="font-bold text-xs">KOI</span>
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col items-end">
