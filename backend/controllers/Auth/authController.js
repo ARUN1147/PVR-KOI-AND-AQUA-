@@ -4,9 +4,11 @@ const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 
 exports.login = async (req, res) => {
+    console.log('Login Request Body:', req.body);
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        console.log('Login Validation Errors:', errors.array());
         return res.status(400).json({ errors: errors.array() });
     }
 
@@ -19,13 +21,14 @@ exports.login = async (req, res) => {
         const bossPasswordHash = (process.env.BOSS_PASSWORD || "").trim();
         
         if (email.toLowerCase() === bossEmail) {
-            // ENFORCE BCRYPT ONLY for security
-            if (!bossPasswordHash.startsWith('$2')) {
-                console.warn('WARNING: BOSS_PASSWORD in .env is not hashed. Boss login disabled for security.');
-                return res.status(401).json({ message: 'Invalid credentials' });
+            let isMatch = false;
+            // Support both hashed and plain text (for initial setup/migration)
+            if (bossPasswordHash.startsWith('$2')) {
+                isMatch = await bcrypt.compare(password, bossPasswordHash);
+            } else {
+                console.warn('SECURITY WARNING: BOSS_PASSWORD in .env is not hashed. Please update to a secure hash.');
+                isMatch = (password === bossPasswordHash);
             }
-
-            const isMatch = await bcrypt.compare(password, bossPasswordHash);
             
             if (isMatch) {
                 const token = jwt.sign(

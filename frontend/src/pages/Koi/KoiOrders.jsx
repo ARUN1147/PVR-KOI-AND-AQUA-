@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Plus, 
-    Search, 
-    Filter, 
-    ShoppingCart, 
-    User, 
+import {
+    Plus,
+    Search,
+    Filter,
+    ShoppingCart,
+    User,
     Calendar,
     ArrowRightCircle,
     CheckCircle2,
@@ -92,7 +92,7 @@ const KoiOrders = () => {
                     <h1 className="text-4xl font-black text-gray-900 font-display italic uppercase tracking-tight">Order Management</h1>
                     <p className="text-gray-400 font-medium mt-1">Track customer orders and convert enquiries</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setIsModalOpen(true)}
                     className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-orange-100 hover:-translate-y-1 active:scale-95"
                 >
@@ -155,27 +155,25 @@ const KoiOrders = () => {
                                     <td className="px-8 py-6">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-black text-gray-900">₹{order.totalAmount}</span>
-                                            <span className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${
-                                                order.paymentStatus === 'Completed' ? 'text-emerald-500' : 'text-red-500'
-                                            }`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${order.paymentStatus === 'Completed' ? 'text-emerald-500' : 'text-red-500'
+                                                }`}>
                                                 {order.paymentStatus}
                                             </span>
                                         </div>
                                     </td>
                                     <td className="px-8 py-6">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                            order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
-                                            order.status === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-100' : 
-                                            'bg-orange-50 text-orange-600 border border-orange-100'
-                                        }`}>
-                                            {order.status === 'Completed' ? <CheckCircle2 size={12} /> : 
-                                             order.status === 'Cancelled' ? <X size={12} /> : <Clock size={12} />}
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                                order.status === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-100' :
+                                                    'bg-orange-50 text-orange-600 border border-orange-100'
+                                            }`}>
+                                            {order.status === 'Completed' ? <CheckCircle2 size={12} /> :
+                                                order.status === 'Cancelled' ? <X size={12} /> : <Clock size={12} />}
                                             {order.status}
                                         </span>
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         {order.status === 'Pending' && (
-                                            <button 
+                                            <button
                                                 onClick={() => handleStatusUpdate(order._id, 'Completed')}
                                                 className="px-4 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-md active:scale-95"
                                             >
@@ -199,9 +197,9 @@ const KoiOrders = () => {
                 </div>
             </div>
 
-            <Modal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
                 title="CREATE NEW KOI ORDER"
                 maxWidth="max-w-2xl"
             >
@@ -209,10 +207,10 @@ const KoiOrders = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 italic">Customer</label>
-                            <select 
+                            <select
                                 required
                                 value={formData.customer}
-                                onChange={(e) => setFormData({...formData, customer: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
                                 className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold appearance-none"
                             >
                                 <option value="">Select Customer</option>
@@ -221,14 +219,14 @@ const KoiOrders = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 italic">Link Enquiry (Optional)</label>
-                            <select 
+                            <select
                                 value={formData.enquiry}
                                 onChange={(e) => {
                                     const enq = enquiries.find(eq => eq._id === e.target.value);
                                     if (enq) {
-                                        setFormData({...formData, enquiry: e.target.value, fishType: enq.requirement});
+                                        setFormData({ ...formData, enquiry: e.target.value, fishType: enq.requirement });
                                     } else {
-                                        setFormData({...formData, enquiry: e.target.value});
+                                        setFormData({ ...formData, enquiry: e.target.value });
                                     }
                                 }}
                                 className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold appearance-none"
@@ -241,11 +239,11 @@ const KoiOrders = () => {
 
                     <div className="space-y-2">
                         <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 italic">Fish / Food Type</label>
-                        <input 
+                        <input
                             type="text"
                             required
                             value={formData.fishType}
-                            onChange={(e) => setFormData({...formData, fishType: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, fishType: e.target.value })}
                             className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold"
                             placeholder="e.g. Kohaku Koi, Sinking Food"
                         />
@@ -254,22 +252,22 @@ const KoiOrders = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 italic">Quantity</label>
-                            <input 
+                            <input
                                 type="number"
                                 required
                                 value={formData.quantity}
-                                onChange={(e) => setFormData({...formData, quantity: e.target.value, totalAmount: e.target.value * formData.price})}
+                                onChange={(e) => setFormData({ ...formData, quantity: e.target.value, totalAmount: e.target.value * formData.price })}
                                 className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold"
                                 placeholder="0"
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 italic">Price per Unit (₹)</label>
-                            <input 
+                            <input
                                 type="number"
                                 required
                                 value={formData.price}
-                                onChange={(e) => setFormData({...formData, price: e.target.value, totalAmount: formData.quantity * e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, price: e.target.value, totalAmount: formData.quantity * e.target.value })}
                                 className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold"
                                 placeholder="0.00"
                             />
@@ -284,14 +282,14 @@ const KoiOrders = () => {
                     </div>
 
                     <div className="flex gap-4 pt-4">
-                        <button 
+                        <button
                             type="button"
                             onClick={() => setIsModalOpen(false)}
                             className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold uppercase tracking-widest hover:bg-gray-200 transition-all"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             type="submit"
                             className="flex-1 py-4 bg-orange-600 text-white rounded-2xl font-bold uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-100"
                         >

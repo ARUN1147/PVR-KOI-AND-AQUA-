@@ -23,7 +23,7 @@ app.use(hpp()); // Prevent HTTP parameter pollution
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // Increased for dev/testing
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 app.use('/api', limiter);

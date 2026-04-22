@@ -1,0 +1,1145 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+    Plus, 
+    Search, 
+    Filter, 
+    ShoppingCart, 
+    User, 
+    Calendar,
+    ArrowRightCircle,
+    CheckCircle2,
+    Clock,
+    Tag,
+    IndianRupee,
+    ChevronDown,
+    X,
+    FileText,
+    Printer,
+    Download,
+    Eye,
+    History,
+    Receipt,
+    Loader2,
+    Pencil,
+    Trash2
+} from 'lucide-react';
+import { 
+    getKoiOrders, createKoiOrder, updateKoiOrder, deleteKoiOrder, updateKoiOrderStatus, 
+    getKoiCustomers, getKoiEnquiries, getKoiInvoices, 
+    createKoiInvoice, getKoiStock, createKoiCustomer 
+} from '../../services/api';
+import Modal from '../../components/Modal';
+
+const KoiSales = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState(
+        location.pathname.includes('invoices') ? 'history' : 'orders'
+    );
+    const [loading, setLoading] = useState(true);
+
+    // Shared State
+    const [customers, setCustomers] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [enquiries, setEnquiries] = useState([]);
+    const [invoices, setInvoices] = useState([]);
+    const [inventory, setInventory] = useState([]);
+
+    // Order Related State
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [justCreatedOrder, setJustCreatedOrder] = useState(null);
+    const [editingOrderId, setEditingOrderId] = useState(null);
+    const [isEditOrderMode, setIsEditOrderMode] = useState(false);
+    const [orderFormData, setOrderFormData] = useState({
+        customer: '',
+        enquiry: '',
+        orderType: 'Fish',
+        fishType: '',
+        quantity: 1,
+        price: '',
+        totalAmount: 0
+    });
+
+    // Invoice Creator State
+    const [zoom, setZoom] = useState(1);
+    const [isExporting, setIsExporting] = useState(false);
+    const [invoiceFormData, setInvoiceFormData] = useState({
+        customer: '',
+        order: '',
+        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        invoiceDate: new Date().toISOString().split('T')[0],
+        type: 'Fish',
+        items: [{ name: '', quantity: 1, price: 0, total: 0 }],
+        transportCharges: 0,
+        totalAmount: 0,
+        billingInfo: { name: '', address: '', phone: '', gstNo: '' },
+        companyInfo: {
+            name: 'PVR KOI CENTRE',
+            address: '123 Aqua Street, Chennai, TN\nContact: +91 90000 00000',
+            contact: 'pvrkoi@gmail.com | www.pvrkoi.com',
+            gstin: '33AAAAA0000A1Z5'
+        },
+        bankDetails: {
+            accountNo: '9876543210',
+            ifscCode: 'HDFC0001234',
+            bankName: 'HDFC BANK - CHENNAI'
+        }
+    });
+
+    // Invoice History State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+    // Customer Creation State
+    const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+    const [customerFormData, setCustomerFormData] = useState({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        gstNo: ''
+    });
+
+    const handleCreateCustomer = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await createKoiCustomer(customerFormData);
+            setCustomers([...customers, res.data]);
+            setOrderFormData({ ...orderFormData, customer: res.data._id });
+            setIsCustomerModalOpen(false);
+            setCustomerFormData({ name: '', phone: '', email: '', address: '', gstNo: '' });
+            alert('Customer added and selected!');
+        } catch (err) {
+            alert('Error adding customer');
+        }
+    };
+
+    const handleEditOrderClick = (order) => {
+        setOrderFormData({
+            customer: order.customer?._id || order.customer,
+            enquiry: order.enquiry?._id || order.enquiry || '',
+            orderType: order.orderType || 'Fish',
+            fishType: order.fishType,
+            quantity: order.quantity,
+            price: order.price,
+            totalAmount: order.totalAmount
+        });
+        setEditingOrderId(order._id);
+        setIsEditOrderMode(true);
+        setIsOrderModalOpen(true);
+    };
+
+    const handleDeleteOrder = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this order?')) return;
+        try {
+            await deleteKoiOrder(id);
+            fetchInitialData();
+            alert('Order deleted successfully');
+        } catch (err) {
+            alert('Error deleting order');
+        }
+    };
+
+    const handleStatusUpdate = async (id, status) => {
+        try {
+            await updateKoiOrderStatus(id, { status });
+            fetchInitialData();
+        } catch (err) {
+            alert('Status update failed');
+        }
+    };
+
+    const fetchInitialData = async () => {
+        try {
+            setLoading(true);
+            const [ordRes, custRes, enqRes, invRes, stockRes] = await Promise.all([
+                getKoiOrders(), getKoiCustomers(), getKoiEnquiries(), getKoiInvoices(), getKoiStock()
+            ]);
+            setOrders(ordRes.data);
+            setCustomers(custRes.data);
+            setEnquiries(enqRes.data);
+            setInvoices(invRes.data);
+            setInventory(stockRes.data);
+        } catch (err) {
+            console.error('Error fetching data:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
+
+    const [isSaving, setIsSaving] = useState(false);
+
+    const resetOrderForm = () => {
+        setOrderFormData({
+            customer: '',
+            enquiry: '',
+            orderType: 'Fish',
+            fishType: '',
+            quantity: 1,
+            price: '',
+            totalAmount: 0
+        });
+        setIsEditOrderMode(false);
+        setEditingOrderId(null);
+    };
+
+    // --- Order Logic ---
+    const handleCreateOrder = async (e) => {
+        e.preventDefault();
+        if (isSaving) return;
+        setIsSaving(true);
+        try {
+            const payload = { 
+                ...orderFormData,
+                quantity: Number(orderFormData.quantity),
+                price: Number(orderFormData.price),
+                totalAmount: Number(orderFormData.totalAmount)
+            };
+            if (!payload.enquiry) delete payload.enquiry;
+            if (!payload.fishType) {
+                setIsSaving(false);
+                return alert(payload.orderType === 'Food' ? 'Please select a food product from stock' : 'Please enter the fish specification');
+            }
+            if (!payload.customer) {
+                setIsSaving(false);
+                return alert('Please select a customer');
+            }
+
+            let res;
+            if (isEditOrderMode) {
+                res = await updateKoiOrder(editingOrderId, payload);
+                setIsOrderModalOpen(false);
+                alert('Order updated successfully!');
+            } else {
+                res = await createKoiOrder(payload);
+                setIsOrderModalOpen(false);
+                setJustCreatedOrder(res.data);
+                setIsSuccessModalOpen(true);
+            }
+            fetchInitialData();
+            resetOrderForm();
+        } catch (err) {
+            console.error('Submit Error:', err);
+            const serverMsg = err.response?.data?.message;
+            const errorDump = err.response?.data ? JSON.stringify(err.response.data, null, 2) : err.message;
+            alert(`ORDER FAILED:\n${serverMsg || 'Generic Error'}\n\nTechnical Details:\n${errorDump}`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const jumpToInvoice = (order) => {
+        const type = order.orderType || 'Fish';
+        setInvoiceFormData({
+            ...invoiceFormData,
+            type: type, // Category first
+            customer: order.customer?._id || order.customer,
+            order: order._id,
+            billingInfo: {
+                name: order.customer?.name || '',
+                address: order.customer?.address || '',
+                phone: order.customer?.phone || '',
+                gstNo: order.customer?.gstNo || ''
+            },
+            items: [{ 
+                name: order.fishType || (type === 'Fish' ? 'Koi Fish' : 'Koi Food'), 
+                quantity: order.quantity || 1, 
+                price: order.price || 0, 
+                total: order.totalAmount || 0 
+            }],
+            totalAmount: order.totalAmount
+        });
+        setActiveTab('creator');
+    };
+
+    // --- Invoice Logic ---
+    useEffect(() => {
+        const subtotal = invoiceFormData.items.reduce((acc, item) => acc + item.total, 0);
+        const transportation = Number(invoiceFormData.transportCharges) || 0;
+        const total = subtotal + transportation;
+        setInvoiceFormData(prev => ({ ...prev, totalAmount: total }));
+    }, [invoiceFormData.items, invoiceFormData.transportCharges]);
+
+    const addItem = () => {
+        setInvoiceFormData({
+            ...invoiceFormData,
+            items: [...invoiceFormData.items, { name: '', quantity: 1, price: 0, total: 0 }]
+        });
+    };
+
+    const updateItem = (index, field, value) => {
+        const newItems = [...invoiceFormData.items];
+        newItems[index][field] = value;
+        if (field === 'quantity' || field === 'price') {
+            newItems[index].total = newItems[index].quantity * newItems[index].price;
+        }
+        setInvoiceFormData({ ...invoiceFormData, items: newItems });
+    };
+
+    const handleCreateInvoice = async () => {
+        if (!invoiceFormData.customer) return alert('Please select a customer');
+        try {
+            await createKoiInvoice(invoiceFormData);
+            
+            // Auto-complete linked order
+            if (invoiceFormData.order) await updateKoiOrderStatus(invoiceFormData.order, { status: 'Completed' });
+
+            fetchInitialData();
+            setActiveTab('history');
+            alert('Invoice saved successfully');
+        } catch (err) {
+            console.error('Save failed:', err);
+        }
+    };
+
+    const numberToWords = (num) => {
+        const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+        const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+        const n = ('0000000' + num).slice(-7).match(/^(\d{2})(\d{2})(\d{1})(\d{2})$/);
+        if (!n) return '';
+        let str = '';
+        str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Lakh ' : '';
+        str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Thousand ' : '';
+        str += (Number(n[3]) !== 0) ? a[Number(n[3])] + 'Hundred ' : '';
+        str += (Number(n[4]) !== 0) ? ((str !== '') ? 'and ' : '') + (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Only' : 'Only';
+        return str;
+    };
+
+    const handlePrint = () => window.print();
+
+    const handleDownloadPDF = (targetId = 'koi-invoice-to-print', fileName = 'Invoice.pdf') => {
+        if (typeof window.html2pdf === 'undefined') return alert('PDF library is loading...');
+        setIsExporting(true);
+        setTimeout(() => {
+            const element = document.getElementById(targetId);
+            const opt = {
+                margin: [10, 10],
+                filename: fileName,
+                image: { type: 'jpeg', quality: 1.0 },
+                html2canvas: { scale: 3, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            window.html2pdf().set(opt).from(element).save().then(() => setIsExporting(false));
+        }, 300);
+    };
+
+    const handleViewInvoice = (inv) => {
+        setSelectedInvoice(inv);
+        setIsViewModalOpen(true);
+    };
+
+    const handlePrintHistory = (inv) => {
+        setSelectedInvoice(inv);
+        setTimeout(() => window.print(), 300);
+    };
+
+    const filteredInvoices = invoices.filter(inv => 
+        (inv.customer?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (inv.invoiceNumber?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+    );
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <Loader2 className="animate-spin text-orange-600" size={40} />
+                <p className="text-gray-400 font-bold italic animate-pulse">Synchronizing Sales Data...</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Unified Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
+                <div>
+                    <h1 className="text-4xl font-black text-gray-900 font-display italic uppercase tracking-tighter">Koi Sales & Billing</h1>
+                    <p className="text-gray-400 font-medium mt-1">Unified module for orders, quotations, and tax invoices</p>
+                </div>
+                
+                <div className="flex items-center gap-3 bg-white p-2 rounded-[2rem] shadow-xl shadow-orange-100/50 border border-orange-50">
+                    <button 
+                        onClick={() => setActiveTab('orders')}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'orders' ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <ShoppingCart size={16} /> Orders
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('creator')}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'creator' ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <Receipt size={16} /> Creator
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('history')}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <History size={16} /> History
+                    </button>
+                </div>
+            </div>
+
+            {/* Content Tabs */}
+            {activeTab === 'orders' && (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center no-print">
+                        <div className="relative w-96">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input 
+                                type="text"
+                                placeholder="Search orders..."
+                                className="w-full pl-12 pr-6 py-4 bg-white border-none rounded-[1.5rem] shadow-sm focus:ring-2 focus:ring-orange-500 transition-all font-semibold"
+                            />
+                        </div>
+                        <button 
+                            onClick={resetOrderForm && (() => { resetOrderForm(); setIsOrderModalOpen(true); })}
+                            className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-orange-100 transition-all hover:-translate-y-1 active:scale-95"
+                        >
+                            <Plus size={18} /> Record Sale
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50/50">
+                                <tr>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Info</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Item / Qty</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {orders.map(order => {
+                                    const linkedInvoice = invoices.find(inv => inv.order === order._id || (inv.order?._id === order._id));
+                                    return (
+                                        <tr key={order._id} className="hover:bg-gray-50/50 transition-all group">
+                                            <td className="px-8 py-6">
+                                                <div className="font-black text-gray-900 italic tracking-tighter">#{order._id.slice(-6).toUpperCase()}</div>
+                                                <div className="flex gap-2 items-center mt-1">
+                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${
+                                                        order.orderType === 'Food' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'
+                                                    }`}>
+                                                        {order.orderType || 'Fish'}
+                                                    </span>
+                                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(order.orderDate).toLocaleDateString()}</div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 font-bold text-gray-900 uppercase tracking-tight">{order.customer?.name}</td>
+                                            <td className="px-8 py-6">
+                                                <div className="font-bold text-gray-900">{order.fishType}</div>
+                                                <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 w-fit px-1 rounded mt-1">{order.quantity} Units</div>
+                                            </td>
+                                            <td className="px-8 py-6 font-black text-gray-900 text-lg flex items-center gap-1"><IndianRupee size={16} className="text-gray-400" /> {order.totalAmount}</td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex flex-col gap-2">
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                        order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'
+                                                    }`}>
+                                                        {order.status === 'Completed' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                                                        {order.status}
+                                                    </span>
+                                                    {linkedInvoice && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase tracking-widest w-fit border border-blue-100">
+                                                            <Receipt size={10} /> Invoiced
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <div className="flex gap-2 justify-end">
+                                                    {linkedInvoice ? (
+                                                        <button 
+                                                            onClick={() => handleViewInvoice(linkedInvoice)}
+                                                            className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-2 shadow-md shadow-blue-100"
+                                                        >
+                                                            <Eye size={14} /> View
+                                                        </button>
+                                                    ) : (
+                                                        <button 
+                                                            onClick={() => jumpToInvoice(order)}
+                                                            className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
+                                                        >
+                                                            <Receipt size={14} /> Bill
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => handleEditOrderClick(order)}
+                                                        className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-900 hover:text-white transition-all shadow-sm"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteOrder(order._id)}
+                                                        className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                    {order.status === 'Pending' && (
+                                                        <button 
+                                                            onClick={() => handleStatusUpdate(order._id, 'Completed')}
+                                                            className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-black text-[10px] uppercase tracking-widest shadow-md shadow-emerald-100"
+                                                        >
+                                                            Done
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'creator' && (
+                <div className="flex flex-col gap-6 no-print">
+                    <div className="flex justify-end gap-3 bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+                        <div className="flex items-center gap-2 border-r pr-4 hidden md:flex">
+                            <button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} className="p-2 hover:bg-gray-100 rounded-lg">-</button>
+                            <span className="text-xs font-black w-10 text-center">{Math.round(zoom * 100)}%</span>
+                            <button onClick={() => setZoom(Math.min(1.5, zoom + 0.1))} className="p-2 hover:bg-gray-100 rounded-lg">+</button>
+                        </div>
+                        <button onClick={handleCreateInvoice} className="flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all">
+                            <CheckCircle2 size={16} /> Save Record
+                        </button>
+                        <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">
+                            <Printer size={16} /> Print
+                        </button>
+                        <button onClick={() => handleDownloadPDF()} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all">
+                            <Download size={16} /> PDF
+                        </button>
+                    </div>
+
+                    <div className="flex justify-center bg-gray-100 rounded-[3rem] p-12 min-h-[1000px] overflow-auto shadow-inner border-4 border-white">
+                        <div 
+                            style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+                            className="bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative"
+                            id="koi-invoice-to-print"
+                        >
+                            {/* PROFESSIONAL TAX INVOICE TEMPLATE */}
+                            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
+                                <div style={{ textAlign: 'center', padding: '10px', fontWeight: '900', fontSize: '18px', background: '#fff7ed', color: '#ea580c', borderBottom: '1px solid #fed7aa', letterSpacing: '8px' }}>
+                                    TAX INVOICE
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                    <div style={{ borderRight: '1px solid #fed7aa' }}>
+                                        <div style={{ padding: '15px', borderBottom: '1px solid #fed7aa', textAlign: 'center' }}>
+                                            <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#ea580c', margin: 0, letterSpacing: '-1px' }}>{invoiceFormData.companyInfo.name}</h2>
+                                            <p style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line' }}>{invoiceFormData.companyInfo.address}</p>
+                                            <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>{invoiceFormData.companyInfo.contact}</p>
+                                            <div style={{ background: '#ea580c', padding: '6px', marginTop: '12px', fontSize: '12px', fontWeight: '900', color: 'white', borderRadius: '4px', display: 'inline-block' }}>
+                                                GSTIN: {invoiceFormData.companyInfo.gstin}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ background: '#ffedd5', padding: '8px', textAlign: 'center', borderBottom: '1px solid #fed7aa', fontWeight: '900', color: '#ea580c', fontSize: '10px' }}>BILL TO</div>
+                                            <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <select 
+                                                    className="no-print w-full p-2 border rounded-lg bg-gray-50 font-bold"
+                                                    value={invoiceFormData.customer}
+                                                    onChange={(e) => {
+                                                        const c = customers.find(x => x._id === e.target.value);
+                                                        if(c) setInvoiceFormData({...invoiceFormData, customer: c._id, billingInfo: { name: c.name, address: c.address, phone: c.phone, gstNo: c.gstNo || '' } });
+                                                    }}
+                                                >
+                                                    <option value="">Choose Customer</option>
+                                                    {customers.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                                                </select>
+                                                <input style={{ fontWeight: '900', fontSize: '16px', border: 'none', color: '#111', width: '100%' }} placeholder="Customer Name" value={invoiceFormData.billingInfo.name} readOnly />
+                                                <textarea style={{ fontSize: '11px', border: 'none', resize: 'none', height: '40px', color: '#555', width: '100%' }} placeholder="Address" value={invoiceFormData.billingInfo.address} readOnly />
+                                                <p style={{ margin: 0, color: '#333' }}><b>Phone:</b> {invoiceFormData.billingInfo.phone}</p>
+                                                <p style={{ margin: 0, color: '#333' }}><b>GSTIN:</b> {invoiceFormData.billingInfo.gstNo || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ display: 'flex', borderBottom: '1px solid #fed7aa', height: '45px' }}>
+                                            <div style={{ flex: 1, padding: '10px', fontWeight: '900', borderRight: '1px solid #fed7aa', display: 'flex', alignItems: 'center', color: '#ea580c', fontSize: '10px' }}>INVOICE #</div>
+                                            <div style={{ flex: 1, padding: '10px', display: 'flex', alignItems: 'center', fontWeight: '900', fontSize: '14px' }}>{invoiceFormData.invoiceNumber}</div>
+                                        </div>
+                                        <div style={{ display: 'flex', borderBottom: '1px solid #fed7aa', height: '45px' }}>
+                                            <div style={{ flex: 1, padding: '10px', fontWeight: '900', borderRight: '1px solid #fed7aa', display: 'flex', alignItems: 'center', color: '#ea580c', fontSize: '10px' }}>DATE</div>
+                                            <div style={{ flex: 1, padding: '10px', display: 'flex', alignItems: 'center' }}>
+                                                <input type="date" style={{ border: 'none', fontWeight: '900', background: 'transparent' }} value={invoiceFormData.invoiceDate} onChange={(e) => setInvoiceFormData({...invoiceFormData, invoiceDate: e.target.value})} />
+                                            </div>
+                                        </div>
+                                        <div style={{ padding: '25px', textAlign: 'center' }}>
+                                            <img src="/PVR.png" alt="Logo" style={{ maxHeight: '130px', maxWidth: '100%' }} />
+                                        </div>
+                                        <div style={{ borderTop: '1px solid #fed7aa', padding: '12px' }} className="no-print">
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                {['Fish', 'Food'].map(t => (
+                                                    <button 
+                                                        key={t}
+                                                        onClick={() => setInvoiceFormData({...invoiceFormData, type: t, items: [{ name: '', quantity: 1, price: 0, total: 0 }]})}
+                                                        style={{ flex: 1, padding: '6px', fontSize: '10px', fontWeight: '900', border: '1px solid #fed7aa', background: invoiceFormData.type === t ? '#ea580c' : 'white', color: invoiceFormData.type === t ? 'white' : '#666', borderRadius: '4px' }}
+                                                    >
+                                                        {t.toUpperCase()}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: '#ea580c', color: 'white' }}>
+                                            <th style={{ padding: '12px', border: '1px solid #c2410c', fontSize: '10px', fontWeight: '900' }}>SL</th>
+                                            <th style={{ padding: '12px', border: '1px solid #c2410c', textAlign: 'left', fontSize: '10px', fontWeight: '900' }}>ITEM DESCRIPTION</th>
+                                            <th style={{ padding: '12px', border: '1px solid #c2410c', fontSize: '10px', fontWeight: '900' }}>QTY</th>
+                                            <th style={{ padding: '12px', border: '1px solid #c2410c', textAlign: 'right', fontSize: '10px', fontWeight: '900' }}>PRICE (₹)</th>
+                                            <th style={{ padding: '12px', border: '1px solid #c2410c', textAlign: 'right', fontSize: '10px', fontWeight: '900' }}>TOTAL (₹)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {invoiceFormData.items.map((item, i) => (
+                                            <tr key={i} style={{ height: '40px' }}>
+                                                <td style={{ textAlign: 'center', border: '1px solid #fed7aa', fontWeight: 'bold' }}>{i + 1}</td>
+                                                <td style={{ padding: '0 12px', border: '1px solid #fed7aa' }}>
+                                                    {invoiceFormData.type === 'Food' ? (
+                                                        <select 
+                                                            style={{ width: '100%', border: 'none', fontWeight: '900', background: 'transparent' }}
+                                                            value={item.name}
+                                                            onChange={(e) => updateItem(i, 'name', e.target.value)}
+                                                        >
+                                                            <option value="">Select Product...</option>
+                                                            {inventory.map(prod => <option key={prod._id} value={prod.itemName}>{prod.itemName}</option>)}
+                                                        </select>
+                                                    ) : (
+                                                        <input 
+                                                            style={{ width: '100%', border: 'none', fontWeight: '900', background: 'transparent' }} 
+                                                            placeholder="Enter Item Description..." 
+                                                            value={item.name} 
+                                                            onChange={(e) => updateItem(i, 'name', e.target.value)}
+                                                        />
+                                                    )}
+                                                </td>
+                                                <td style={{ border: '1px solid #fed7aa', textAlign: 'center' }}>
+                                                    <input type="number" style={{ width: '60px', textAlign: 'center', border: 'none', fontWeight: '900', background: 'transparent' }} value={item.quantity} onChange={(e) => updateItem(i, 'quantity', Number(e.target.value))} />
+                                                </td>
+                                                <td style={{ border: '1px solid #fed7aa', textAlign: 'right', paddingRight: '12px' }}>
+                                                    <input type="number" style={{ width: '90px', textAlign: 'right', border: 'none', fontWeight: '900', background: 'transparent' }} value={item.price} onChange={(e) => updateItem(i, 'price', Number(e.target.value))} />
+                                                </td>
+                                                <td style={{ border: '1px solid #fed7aa', textAlign: 'right', paddingRight: '12px', fontWeight: '900', color: '#ea580c' }}>
+                                                    ₹{(item.quantity * item.price).toLocaleString()}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        <tr className="no-print">
+                                            <td colSpan={5} style={{ textAlign: 'center', padding: '12px', background: '#fafafa' }}>
+                                                <button onClick={addItem} style={{ fontSize: '10px', fontWeight: '900', color: '#ea580c', letterSpacing: '2px' }}>+ ADD ANOTHER ITEM</button>
+                                            </td>
+                                        </tr>
+                                        {[...Array(Math.max(0, 5 - invoiceFormData.items.length))].map((_, i) => (
+                                            <tr key={i} style={{ height: '40px' }}><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td></tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                <div style={{ borderTop: '2px solid #ea580c' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                        <div style={{ padding: '20px', borderRight: '1px solid #fed7aa', background: '#fafafa' }}>
+                                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '900', color: '#888', letterSpacing: '1px' }}>TOTAL IN WORDS</p>
+                                            <p style={{ margin: '8px 0 0 0', fontWeight: '900', color: '#ea580c', fontSize: '14px', fontStyle: 'italic' }}>{numberToWords(invoiceFormData.totalAmount)}</p>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee' }}>
+                                                <span style={{ color: '#555', fontWeight: '900', fontSize: '10px' }}>TRANSPORT</span>
+                                                <input type="number" style={{ width: '100px', textAlign: 'right', border: 'none', fontWeight: '900', color: '#111' }} value={invoiceFormData.transportCharges} onChange={(e) => setInvoiceFormData({...invoiceFormData, transportCharges: Number(e.target.value)})} />
+                                            </div>
+                                            <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', background: '#ea580c', fontWeight: '900', color: 'white', fontSize: '20px', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)' }}>
+                                                <span>GRAND TOTAL</span>
+                                                <span>₹{invoiceFormData.totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', borderTop: '2px solid #ea580c' }}>
+                                    <div style={{ padding: '20px', borderRight: '1px solid #fed7aa' }}>
+                                        <div style={{ background: '#ffedd5', padding: '6px 12px', fontSize: '10px', fontWeight: '900', color: '#ea580c', display: 'inline-block', borderRadius: '4px', marginBottom: '15px' }}>BANK TRANSFER DETAILS</div>
+                                        <p style={{ margin: '4px 0', color: '#111', fontSize: '13px' }}><b>ACCOUNT NO:</b> {invoiceFormData.bankDetails.accountNo}</p>
+                                        <p style={{ margin: '4px 0', color: '#111', fontSize: '13px' }}><b>IFSC CODE:</b> {invoiceFormData.bankDetails.ifscCode}</p>
+                                        <p style={{ margin: '4px 0', color: '#111', fontSize: '13px' }}><b>BANK NAME:</b> {invoiceFormData.bankDetails.bankName}</p>
+                                    </div>
+                                    <div style={{ height: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', textAlign: 'center', background: '#fafafa' }}>
+                                        <p style={{ margin: 0, fontWeight: '900', color: '#111', fontSize: '11px', textTransform: 'uppercase' }}>for {invoiceFormData.companyInfo.name}</p>
+                                        <div style={{ borderTop: '1px dashed #ccc', width: '80%', margin: '0 auto' }}></div>
+                                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '900', color: '#ea580c', letterSpacing: '1px' }}>AUTHORIZED SIGNATURE</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'history' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 no-print">
+                    <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+                        <div className="relative w-full md:w-96">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search invoices..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none transition-all font-semibold"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50/50">
+                                <tr>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Invoice No</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 text-sm">
+                                {filteredInvoices.length > 0 ? filteredInvoices.map((inv) => (
+                                    <tr key={inv._id} className="hover:bg-gray-50/50 transition-all group">
+                                        <td className="px-8 py-6 font-bold text-gray-600">{new Date(inv.date).toLocaleDateString()}</td>
+                                        <td className="px-8 py-6">
+                                            <div className="font-black text-gray-900 italic tracking-tighter text-lg">#{inv.invoiceNumber}</div>
+                                            {inv.order && (
+                                                <div className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-1 bg-blue-50 px-1 rounded w-fit">Ref Order: #{inv.order._id?.slice(-6).toUpperCase() || inv.order.toString().slice(-6).toUpperCase()}</div>
+                                            )}
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="font-black text-gray-900 uppercase tracking-tight">{inv.customer?.name}</div>
+                                            <div className="text-[10px] text-gray-400 font-black italic mt-0.5">{inv.customer?.phone}</div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${inv.type === 'Fish' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                                {inv.type}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 font-black text-gray-900 text-xl tracking-tighter">
+                                            <div className="flex items-center gap-1">
+                                                <IndianRupee size={18} className="text-gray-400" />
+                                                {inv.totalAmount.toLocaleString()}
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <div className="flex gap-2 justify-end no-print">
+                                                <button 
+                                                    onClick={() => handleViewInvoice(inv)}
+                                                    className="p-3 bg-gray-50 hover:bg-orange-50 hover:text-orange-600 text-gray-400 rounded-2xl transition-all shadow-sm"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handlePrintHistory(inv)}
+                                                    className="p-3 bg-gray-50 hover:bg-emerald-50 hover:text-emerald-600 text-gray-400 rounded-2xl transition-all shadow-sm"
+                                                >
+                                                    <Printer size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={6} className="py-32 text-center flex flex-col items-center justify-center gap-4">
+                                            <div className="p-6 bg-gray-50 rounded-full text-gray-200"><Receipt size={60} /></div>
+                                            <p className="text-gray-400 font-black uppercase tracking-widest text-xs italic">No invoice records identified</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Modals */}
+            <Modal
+                isOpen={isOrderModalOpen}
+                onClose={() => setIsOrderModalOpen(false)}
+                title="CREATE NEW KOI ORDER"
+                maxWidth="max-w-2xl"
+            >
+                <form onSubmit={handleCreateOrder} className="p-10 space-y-6">
+                    <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl w-fit mb-4">
+                        {['Fish', 'Food'].map(t => (
+                            <button 
+                                key={t}
+                                type="button"
+                                onClick={() => setOrderFormData({ ...orderFormData, orderType: t, fishType: '', price: 0, totalAmount: 0 })}
+                                className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all ${
+                                    orderFormData.orderType === t ? 'bg-orange-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'
+                                }`}
+                            >
+                                {t.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Start from Enquiry (Optional)</label>
+                        <select 
+                            value={orderFormData.enquiry}
+                            disabled={orderFormData.orderType === 'Food'}
+                            onChange={(e) => {
+                                const enq = enquiries.find(eq => eq._id === e.target.value);
+                                if (enq) {
+                                    const invItem = inventory.find(i => i.itemName.toLowerCase() === (enq.requirement || '').toLowerCase());
+                                    setOrderFormData({ 
+                                        ...orderFormData, 
+                                        enquiry: e.target.value, 
+                                        customer: enq.customerId?._id || '',
+                                        fishType: enq.requirement || '',
+                                        price: invItem ? invItem.sellingPrice : 0,
+                                        totalAmount: orderFormData.quantity * (invItem ? invItem.sellingPrice : 0)
+                                    });
+                                } else {
+                                    setOrderFormData({ ...orderFormData, enquiry: '', customer: '', fishType: '', price: 0, totalAmount: 0 });
+                                }
+                            }}
+                            className="w-full px-6 py-4 bg-orange-50/50 border-2 border-orange-100 border-dashed rounded-3xl focus:ring-4 focus:ring-orange-500/20 transition-all font-bold text-xs uppercase tracking-widest appearance-none disabled:opacity-50"
+                        >
+                            <option value="">{orderFormData.orderType === 'Food' ? 'N/A for Food' : 'New Direct Order (No Enquiry)'}</option>
+                            {enquiries.filter(e => e.status !== 'Converted').map(enq => (
+                                <option key={enq._id} value={enq._id}>{enq.customerId?.name} - {enq.requirement}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center px-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Customer</label>
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsCustomerModalOpen(true)}
+                                    className="text-[10px] font-black text-orange-600 uppercase tracking-widest hover:underline"
+                                >
+                                    + New Customer
+                                </button>
+                            </div>
+                            <select 
+                                required
+                                value={orderFormData.customer}
+                                onChange={(e) => setOrderFormData({ ...orderFormData, customer: e.target.value })}
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-bold text-sm"
+                            >
+                                <option value="">Select Customer</option>
+                                {customers.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">
+                                {orderFormData.orderType === 'Fish' ? 'Fish Specification' : 'Food Product'}
+                            </label>
+                            {orderFormData.orderType === 'Food' ? (
+                                <select 
+                                    required
+                                    value={orderFormData.fishType}
+                                    onChange={(e) => {
+                                        const item = inventory.find(i => i.itemName === e.target.value);
+                                        setOrderFormData({ 
+                                            ...orderFormData, 
+                                            fishType: e.target.value,
+                                            price: item?.sellingPrice || 0,
+                                            totalAmount: orderFormData.quantity * (item?.sellingPrice || 0)
+                                        });
+                                    }}
+                                    className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-bold text-sm"
+                                >
+                                    <option value="">Select from Stock</option>
+                                    {inventory.filter(i => i.category !== 'Fish').map(item => (
+                                        <option key={item._id} value={item.itemName}>{item.itemName} (₹{item.sellingPrice || 0})</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="relative">
+                                    <input 
+                                        list="order-inventory-list"
+                                        type="text"
+                                        required
+                                        value={orderFormData.fishType}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const invItem = inventory.filter(i => i.category === 'Fish').find(i => i.itemName === val);
+                                            setOrderFormData({ 
+                                                ...orderFormData, 
+                                                fishType: val, 
+                                                price: invItem ? invItem.sellingPrice : orderFormData.price,
+                                                totalAmount: orderFormData.quantity * (invItem ? invItem.sellingPrice : orderFormData.price)
+                                            });
+                                        }}
+                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-bold text-sm uppercase"
+                                        placeholder="Enter Specification..."
+                                    />
+                                    <datalist id="order-inventory-list">
+                                        {inventory.filter(i => i.category === 'Fish').map(item => (
+                                            <option key={item._id} value={item.itemName}>{item.itemName}</option>
+                                        ))}
+                                    </datalist>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Quantity</label>
+                            <input 
+                                type="number"
+                                required
+                                value={orderFormData.quantity}
+                                onChange={(e) => setOrderFormData({ ...orderFormData, quantity: e.target.value, totalAmount: e.target.value * orderFormData.price })}
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 text-center font-bold"
+                                placeholder="0"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Unit Price</label>
+                            <input 
+                                type="number"
+                                required
+                                value={orderFormData.price}
+                                onChange={(e) => setOrderFormData({ ...orderFormData, price: e.target.value, totalAmount: orderFormData.quantity * e.target.value })}
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 text-center font-bold"
+                                placeholder="0.00"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Total Amount</label>
+                            <div className="w-full px-6 py-4 bg-orange-600 text-white rounded-2xl text-center font-black text-lg shadow-lg">
+                                ₹{orderFormData.totalAmount || 0}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-6 pt-4">
+                        <button type="button" onClick={() => setIsOrderModalOpen(false)} className="flex-1 py-5 bg-gray-100 text-gray-500 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-gray-200 transition-all">Cancel</button>
+                        <button type="submit" className="flex-1 py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] hover:shadow-2xl hover:shadow-orange-200 transition-all active:scale-95">Verify & Create</button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Quick Customer Modal */}
+            <Modal
+                isOpen={isCustomerModalOpen}
+                onClose={() => setIsCustomerModalOpen(false)}
+                title="REGISTER NEW CUSTOMER"
+                maxWidth="max-w-xl"
+            >
+                <form onSubmit={handleCreateCustomer} className="p-8 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Full Name</label>
+                            <input 
+                                type="text"
+                                required
+                                value={customerFormData.name}
+                                onChange={(e) => setCustomerFormData({ ...customerFormData, name: e.target.value })}
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold"
+                                placeholder="Enter Name"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phone Number</label>
+                            <input 
+                                type="text"
+                                required
+                                value={customerFormData.phone}
+                                onChange={(e) => setCustomerFormData({ ...customerFormData, phone: e.target.value })}
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold"
+                                placeholder="Contact Number"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">GST Number (Optional)</label>
+                        <input 
+                            type="text"
+                            value={customerFormData.gstNo}
+                            onChange={(e) => setCustomerFormData({ ...customerFormData, gstNo: e.target.value })}
+                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold uppercase"
+                            placeholder="GSTIN"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Address</label>
+                        <textarea 
+                            value={customerFormData.address}
+                            onChange={(e) => setCustomerFormData({ ...customerFormData, address: e.target.value })}
+                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold min-h-[100px]"
+                            placeholder="Complete Address"
+                        />
+                    </div>
+                    <div className="flex gap-4 pt-4">
+                        <button type="button" onClick={() => setIsCustomerModalOpen(false)} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
+                        <button type="submit" className="flex-1 py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-orange-100">Add & Select</button>
+                    </div>
+                </form>
+            </Modal>
+
+            <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="INVOICE VAULT | PREVIEW" maxWidth="max-w-4xl">
+                <div className="flex flex-col gap-6">
+                    <div className="flex justify-end gap-3 no-print mb-4">
+                        <button onClick={() => window.print()} className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"><Printer size={14} /> Print</button>
+                        <button onClick={() => handleDownloadPDF('view-invoice-to-print', `Koi_Inv_${selectedInvoice?.invoiceNumber}.pdf`)} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"><Download size={14} /> PDF</button>
+                    </div>
+
+                    <div className="overflow-auto bg-gray-50 border-4 border-white p-12 rounded-[3.5rem] flex justify-center shadow-inner">
+                        {selectedInvoice && (
+                            <div className="bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative" id="view-invoice-to-print">
+                                {/* PROFESSIONAL TAX INVOICE TEMPLATE (READ ONLY) */}
+                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
+                                    <div style={{ textAlign: 'center', padding: '10px', fontWeight: '900', fontSize: '18px', background: '#fff7ed', color: '#ea580c', borderBottom: '1px solid #fed7aa', letterSpacing: '8px' }}>TAX INVOICE</div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                        <div style={{ borderRight: '1px solid #fed7aa' }}>
+                                            <div style={{ padding: '15px', borderBottom: '1px solid #fed7aa', textAlign: 'center' }}>
+                                                <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#ea580c', margin: 0, letterSpacing: '-1px' }}>{selectedInvoice.companyInfo?.name}</h2>
+                                                <p style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line' }}>{selectedInvoice.companyInfo?.address}</p>
+                                                <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>{selectedInvoice.companyInfo?.contact}</p>
+                                                <div style={{ background: '#ea580c', padding: '6px', marginTop: '12px', fontSize: '12px', fontWeight: '900', color: 'white', borderRadius: '4px', display: 'inline-block' }}>GSTIN: {selectedInvoice.companyInfo?.gstin}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ background: '#ffedd5', padding: '8px', textAlign: 'center', borderBottom: '1px solid #fed7aa', fontWeight: '900', color: '#ea580c', fontSize: '10px' }}>BILL TO</div>
+                                                <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <p style={{ fontWeight: '900', fontSize: '16px', margin: 0, color: '#111' }}>{selectedInvoice.billingInfo?.name}</p>
+                                                    <p style={{ fontSize: '11px', color: '#555', margin: 0 }}>{selectedInvoice.billingInfo?.address}</p>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>Phone:</b> {selectedInvoice.billingInfo?.phone}</p>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>GSTIN:</b> {selectedInvoice.billingInfo?.gstNo || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ display: 'flex', borderBottom: '1px solid #fed7aa', height: '45px' }}>
+                                                <div style={{ flex: 1, padding: '10px', fontWeight: '900', borderRight: '1px solid #fed7aa', display: 'flex', alignItems: 'center', color: '#ea580c', fontSize: '10px' }}>INVOICE #</div>
+                                                <div style={{ flex: 1, padding: '10px', display: 'flex', alignItems: 'center', fontWeight: '900', fontSize: '14px' }}>{selectedInvoice.invoiceNumber}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', borderBottom: '1px solid #fed7aa', height: '45px' }}>
+                                                <div style={{ flex: 1, padding: '10px', fontWeight: '900', borderRight: '1px solid #fed7aa', display: 'flex', alignItems: 'center', color: '#ea580c', fontSize: '10px' }}>DATE</div>
+                                                <div style={{ flex: 1, padding: '10px', display: 'flex', alignItems: 'center', fontWeight: '900' }}>{new Date(selectedInvoice.date).toLocaleDateString()}</div>
+                                            </div>
+                                            <div style={{ padding: '25px', textAlign: 'center' }}>
+                                                <img src="/PVR.png" alt="Logo" style={{ maxHeight: '130px', maxWidth: '100%' }} />
+                                            </div>
+                                            <div style={{ borderTop: '1px solid #fed7aa', padding: '15px', textAlign: 'center' }}>
+                                                <span style={{ fontSize: '14px', fontWeight: '900', color: '#ea580c', letterSpacing: '2px' }}>TYPE: {selectedInvoice.type?.toUpperCase()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ background: '#ea580c', color: 'white' }}>
+                                                <th style={{ padding: '12px', border: '1px solid #c2410c', fontSize: '10px', fontWeight: '900' }}>SL</th>
+                                                <th style={{ padding: '12px', border: '1px solid #c2410c', textAlign: 'left', fontSize: '10px', fontWeight: '900' }}>ITEM DESCRIPTION</th>
+                                                <th style={{ padding: '12px', border: '1px solid #c2410c', fontSize: '10px', fontWeight: '900' }}>QTY</th>
+                                                <th style={{ padding: '12px', border: '1px solid #c2410c', textAlign: 'right', fontSize: '10px', fontWeight: '900' }}>PRICE (₹)</th>
+                                                <th style={{ padding: '12px', border: '1px solid #c2410c', textAlign: 'right', fontSize: '10px', fontWeight: '900' }}>TOTAL (₹)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedInvoice.items?.map((item, i) => (
+                                                <tr key={i} style={{ height: '40px' }}>
+                                                    <td style={{ textAlign: 'center', border: '1px solid #fed7aa', fontWeight: 'bold' }}>{i + 1}</td>
+                                                    <td style={{ padding: '0 12px', border: '1px solid #fed7aa', fontWeight: '900' }}>{item.name}</td>
+                                                    <td style={{ border: '1px solid #fed7aa', textAlign: 'center' }}>{item.quantity}</td>
+                                                    <td style={{ border: '1px solid #fed7aa', textAlign: 'right', paddingRight: '12px' }}>₹{item.price.toLocaleString()}</td>
+                                                    <td style={{ border: '1px solid #fed7aa', textAlign: 'right', paddingRight: '12px', fontWeight: '900', color: '#ea580c' }}>₹{item.total.toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                            {[...Array(Math.max(0, 8 - (selectedInvoice.items?.length || 0)))].map((_, i) => (
+                                                <tr key={i} style={{ height: '40px' }}><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td><td style={{ border: '1px solid #fed7aa' }}></td></tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div style={{ borderTop: '2px solid #ea580c' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                            <div style={{ padding: '20px', borderRight: '1px solid #fed7aa', background: '#fafafa' }}>
+                                                <p style={{ margin: 0, fontSize: '10px', fontWeight: '900', color: '#888', letterSpacing: '1px' }}>TOTAL IN WORDS</p>
+                                                <p style={{ margin: '8px 0 0 0', fontWeight: '900', color: '#ea580c', fontSize: '14px', fontStyle: 'italic' }}>{numberToWords(selectedInvoice.totalAmount)}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee' }}>
+                                                    <span style={{ color: '#555', fontWeight: '900', fontSize: '10px' }}>TRANSPORT</span>
+                                                    <span style={{ fontWeight: '900' }}>₹{(selectedInvoice.transportCharges || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', background: '#ea580c', fontWeight: '900', color: 'white', fontSize: '20px', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)' }}>
+                                                    <span>GRAND TOTAL</span>
+                                                    <span>₹{selectedInvoice.totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', borderTop: '2px solid #ea580c' }}>
+                                        <div style={{ padding: '20px', borderRight: '1px solid #fed7aa' }}>
+                                            <div style={{ background: '#ffedd5', padding: '6px 12px', fontSize: '10px', fontWeight: '900', color: '#ea580c', display: 'inline-block', borderRadius: '4px', marginBottom: '15px' }}>BANK TRANSFER DETAILS</div>
+                                            <p style={{ margin: '4px 0', color: '#111', fontSize: '13px' }}><b>ACCOUNT NO:</b> {selectedInvoice.bankDetails?.accountNo}</p>
+                                            <p style={{ margin: '4px 0', color: '#111', fontSize: '13px' }}><b>IFSC CODE:</b> {selectedInvoice.bankDetails?.ifscCode}</p>
+                                            <p style={{ margin: '4px 0', color: '#111', fontSize: '13px' }}><b>BANK NAME:</b> {selectedInvoice.bankDetails?.bankName}</p>
+                                        </div>
+                                        <div style={{ height: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px', textAlign: 'center', background: '#fafafa' }}>
+                                            <p style={{ margin: 0, fontWeight: '900', color: '#111', fontSize: '11px', textTransform: 'uppercase' }}>for {selectedInvoice.companyInfo?.name}</p>
+                                            <div style={{ borderTop: '1px dashed #ccc', width: '80%', margin: '0 auto' }}></div>
+                                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '900', color: '#ea580c', letterSpacing: '1px' }}>AUTHORIZED SIGNATURE</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+            {/* Success Feedback Modal */}
+            <Modal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                title="ORDER REGISTERED"
+                maxWidth="max-w-md"
+            >
+                <div className="p-10 flex flex-col items-center text-center gap-6">
+                    <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center animate-bounce shadow-inner shadow-emerald-100">
+                        <CheckCircle2 size={50} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-900 uppercase italic tracking-tighter">Sale Confirmed!</h2>
+                        <p className="text-gray-400 font-bold text-sm mt-1 uppercase tracking-widest">Order ID: #{justCreatedOrder?._id?.slice(-6).toUpperCase()}</p>
+                    </div>
+                    <div className="w-full space-y-3 pt-4">
+                        <button 
+                            onClick={() => {
+                                jumpToInvoice(justCreatedOrder);
+                                setIsSuccessModalOpen(false);
+                            }}
+                            className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.3em] shadow-xl shadow-orange-100 hover:bg-orange-700 transition-all"
+                        >
+                            Generate Invoice
+                        </button>
+                        <button 
+                            onClick={() => setIsSuccessModalOpen(false)}
+                            className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-xs tracking-[0.3em] hover:bg-gray-200 transition-all"
+                        >
+                            Back to Dashboard
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+};
+
+export default KoiSales;

@@ -19,6 +19,28 @@ api.interceptors.request.use(
     }
 );
 
+// Response Interceptor for Pagination flattening
+api.interceptors.response.use(
+    (response) => {
+        const data = response.data;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+            // Find the first array property which likely contains the list data
+            const listKey = Object.keys(data).find(key => Array.isArray(data[key]));
+            if (listKey) {
+                // Attach the full paginated object as a non-enumerable property for future use
+                const flattenedData = data[listKey];
+                Object.defineProperty(flattenedData, '_pagination', {
+                    value: data,
+                    enumerable: false
+                });
+                return { ...response, data: flattenedData };
+            }
+        }
+        return response;
+    },
+    (error) => Promise.reject(error)
+);
+
 // Auth
 export const login = (credentials) => api.post('/auth/login', credentials);
 
@@ -77,6 +99,8 @@ export const deleteKoiEnquiry = (id) => api.delete(`/koi/enquiries/${id}`);
 
 export const getKoiOrders = () => api.get('/koi/orders');
 export const createKoiOrder = (data) => api.post('/koi/orders', data);
+export const updateKoiOrder = (id, data) => api.put(`/koi/orders/${id}`, data);
+export const deleteKoiOrder = (id) => api.delete(`/koi/orders/${id}`);
 export const updateKoiOrderStatus = (id, data) => api.patch(`/koi/orders/${id}/status`, data);
 
 export const getKoiInvoices = () => api.get('/koi/invoices');

@@ -12,7 +12,7 @@ exports.createEnquiry = async (req, res) => {
 exports.getEnquiries = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 100;
         const skip = (page - 1) * limit;
 
         const enquiries = await KoiEnquiry.find()

@@ -14,20 +14,26 @@ exports.getStock = async (req, res) => {
 // Create a new food item (Master Entry)
 exports.createItem = async (req, res) => {
     try {
+        console.log('--- KOI PRODUCT CREATION ATTEMPT ---');
+        console.log('Payload:', JSON.stringify(req.body, null, 2));
         const item = await KoiFoodInventory.create(req.body);
+        console.log('Product created in DB:', item._id);
         res.status(201).json(item);
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        console.error('PRODUCT CREATION ERROR:', err);
+        res.status(400).json({ message: err.message, errors: err.errors });
     }
 };
 
 // Update food item master record
 exports.updateItem = async (req, res) => {
     try {
+        console.log('--- KOI PRODUCT UPDATE ATTEMPT ---');
         const item = await KoiFoodInventory.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(item);
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        console.error('PRODUCT UPDATE ERROR:', err);
+        res.status(400).json({ message: err.message, errors: err.errors });
     }
 };
 

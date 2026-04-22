@@ -158,7 +158,13 @@ const AquaLayout = () => {
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <Outlet />
+                    <React.Suspense fallback={
+                        <div className="flex items-center justify-center min-h-[400px]">
+                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-600"></div>
+                        </div>
+                    }>
+                        <Outlet />
+                    </React.Suspense>
                 </main>
             </div>
         </div>

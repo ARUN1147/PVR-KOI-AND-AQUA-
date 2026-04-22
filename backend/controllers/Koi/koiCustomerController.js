@@ -3,11 +3,15 @@ const KoiCustomer = require('../../models/Koi/KoiCustomer');
 exports.getCustomers = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 100;
         const skip = (page - 1) * limit;
 
         const customers = await KoiCustomer.find()
             .sort({ name: 1 })
+            .populate({
+                path: 'orderHistory',
+                options: { sort: { createdAt: -1 }, limit: 1 }
+            })
             .skip(skip)
             .limit(limit);
 
@@ -26,7 +30,11 @@ exports.getCustomers = async (req, res) => {
 
 exports.getCustomerById = async (req, res) => {
     try {
-        const customer = await KoiCustomer.findById(req.params.id).populate('orderHistory');
+        const customer = await KoiCustomer.findById(req.params.id)
+            .populate({
+                path: 'orderHistory',
+                options: { sort: { createdAt: -1 } }
+            });
         res.json(customer);
     } catch (err) {
         res.status(404).json({ message: 'Customer not found' });

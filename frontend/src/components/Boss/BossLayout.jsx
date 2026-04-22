@@ -35,6 +35,12 @@ const SidebarItem = ({ icon: Icon, label, path, active, collapsed, colorClass })
     </Link>
 );
 
+const LoadingFallback = () => (
+    <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+    </div>
+);
+
 const BossLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
@@ -90,8 +96,7 @@ const BossLayout = () => {
             items: [
                 { icon: Fish, label: 'Koi Dashboard', path: '/boss/koi/dashboard', color: 'bg-orange-600' },
                 { icon: MessageSquare, label: 'Enquiries', path: '/boss/koi/enquiries', color: 'bg-orange-600' },
-                { icon: ShoppingCart, label: 'Koi Orders', path: '/boss/koi/orders', color: 'bg-orange-600' },
-                { icon: FileText, label: 'Invoices', path: '/boss/koi/invoices', color: 'bg-orange-600' },
+                { icon: ShoppingCart, label: 'Sales & Billing', path: '/boss/koi/orders', color: 'bg-orange-600' },
                 { icon: CreditCard, label: 'Payments', path: '/boss/koi/payments', color: 'bg-orange-600' },
                 { icon: Package, label: 'Inventory', path: '/boss/koi/inventory', color: 'bg-orange-600' },
                 { icon: Users, label: 'Customers', path: '/boss/koi/customers', color: 'bg-orange-600' },
@@ -197,8 +202,10 @@ const BossLayout = () => {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto custom-scrollbar">
-                    <Outlet />
+                <main className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                    <React.Suspense fallback={<LoadingFallback />}>
+                        <Outlet />
+                    </React.Suspense>
                 </main>
             </div>
         </div>

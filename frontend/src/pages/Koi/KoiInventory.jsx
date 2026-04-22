@@ -28,6 +28,7 @@ const KoiInventory = () => {
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [itemHistory, setItemHistory] = useState([]);
+    const [itemCategory, setItemCategory] = useState('Food');
 
     useEffect(() => {
         fetchAllData();
@@ -57,16 +58,21 @@ const KoiInventory = () => {
         }
     };
 
+    const [isSaving, setIsSaving] = useState(false);
+
     const handleCreateOrUpdateItem = async (e) => {
         e.preventDefault();
+        if (isSaving) return;
+        setIsSaving(true);
+
         const data = {
             itemName: e.target.name.value,
             description: e.target.desc.value,
-            category: e.target.category.value,
+            category: itemCategory,
             unit: e.target.unit.value,
             sellingPrice: Number(e.target.price.value || 0),
             totalAvailableQuantity: Number(e.target.currentStock.value || 0),
-            lowStockThreshold: Number(e.target.reorder.value), // Using one threshold for simplicity
+            lowStockThreshold: Number(e.target.reorder.value),
             reorderLevel: Number(e.target.reorder.value)
         };
 
@@ -80,7 +86,11 @@ const KoiInventory = () => {
             }
             fetchAllData();
         } catch (err) { 
-            alert(`Error: ${err.response?.status} - ${err.response?.data?.message || err.message}`); 
+            const msg = err.response?.data?.message || err.message;
+            const details = err.response?.data?.errors ? '\nDetails: ' + Object.keys(err.response.data.errors).join(', ') : '';
+            alert(`Product Error: ${msg}${details}`); 
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -131,7 +141,11 @@ const KoiInventory = () => {
                                     <td className="px-8 py-5 text-right">
                                         <div className="flex justify-end gap-2">
                                             <button 
-                                                onClick={() => { setSelectedItem(item); setModals({ ...modals, edit: true }); }}
+                                                onClick={() => { 
+                                                    setSelectedItem(item); 
+                                                    setItemCategory(item.category || 'Food');
+                                                    setModals({ ...modals, edit: true }); 
+                                                }}
                                                 className="px-4 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2"
                                             >
                                                 <Edit3 size={14} /> Edit
@@ -193,8 +207,19 @@ const KoiInventory = () => {
                     
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</label>
-                            <input name="category" defaultValue={selectedItem?.category || "General"} className="w-full px-4 py-3 bg-gray-50 rounded-xl font-semibold border-none focus:ring-2 focus:ring-orange-500" />
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Product Type</label>
+                            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                                {['Fish', 'Food'].map(t => (
+                                    <button
+                                        key={t}
+                                        type="button"
+                                        onClick={() => setItemCategory(t)}
+                                        className={`flex-1 py-3 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${itemCategory === t ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-400'}`}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Unit</label>
@@ -223,7 +248,13 @@ const KoiInventory = () => {
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</label>
                         <textarea name="desc" defaultValue={selectedItem?.description} className="w-full px-4 py-3 bg-gray-50 rounded-xl font-semibold border-none focus:ring-2 focus:ring-orange-500" rows="2" />
                     </div>
-                    <button type="submit" className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-xl">{modals.edit ? "Update Record" : "Save Product"}</button>
+                    <button 
+                        type="submit" 
+                        disabled={isSaving}
+                        className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-xl disabled:opacity-50"
+                    >
+                        {isSaving ? "SAVING..." : (modals.edit ? "Update Record" : "Save Product")}
+                    </button>
                 </form>
             </Modal>
 

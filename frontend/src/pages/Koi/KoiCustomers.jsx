@@ -52,21 +52,17 @@ const KoiCustomers = () => {
     };
 
     const toggleExpand = async (id) => {
-        const newExpandedIds = new Set(expandedIds);
-        if (newExpandedIds.has(id)) {
-            newExpandedIds.delete(id);
-        } else {
-            newExpandedIds.add(id);
-            if (!customerDetails[id]) {
-                try {
-                    const res = await getKoiCustomerById(id);
-                    setCustomerDetails(prev => ({ ...prev, [id]: res.data }));
-                } catch (err) {
-                    console.error('Error fetching customer details:', err);
-                }
+        if (!id) return;
+        setExpandedId(expandedId === id ? null : id);
+        
+        if (expandedId !== id && !customerDetails[id]) {
+            try {
+                const res = await getKoiCustomerById(id);
+                setCustomerDetails(prev => ({ ...prev, [id]: res.data }));
+            } catch (err) {
+                console.error('Error fetching customer details:', err);
             }
         }
-        setExpandedIds(newExpandedIds);
     };
 
     const handleSaveCustomer = async (e) => {
@@ -133,9 +129,17 @@ const KoiCustomers = () => {
                         </div>
                         <div>
                             <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">{customer.name}</h3>
-                            <div className="flex items-center gap-3 mt-1">
-                                <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1"><Phone size={12} /> {customer.phone}</span>
-                                <span className="text-[11px] font-bold text-orange-600 uppercase italic tracking-widest bg-orange-50 px-2 py-0.5 rounded-full">{customer.purchaseFrequency || 0} Orders</span>
+                            <div className="flex flex-wrap items-center gap-3 mt-1">
+                                <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1 leading-none"><Phone size={11} className="text-orange-500" /> {customer.phone}</span>
+                                <span className="text-[11px] font-black text-orange-600 uppercase italic tracking-widest bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 shadow-sm">{customer.purchaseFrequency || 0} Orders</span>
+                                {customer.orderHistory && customer.orderHistory.length > 0 && customer.orderHistory[0] && (
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-1 w-1 bg-gray-300 rounded-full"></div>
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter italic">
+                                            Latest: {customer.orderHistory[0].fishType || 'Unspecified'}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -54,6 +54,8 @@ const KoiInvoices = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [zoom, setZoom] = useState(1);
     const [isExporting, setIsExporting] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
     // New Advanced Invoice State
     const [formData, setFormData] = useState({
@@ -201,6 +203,18 @@ const KoiInvoices = () => {
 
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleViewInvoice = (inv) => {
+        setSelectedInvoice(inv);
+        setIsViewModalOpen(true);
+    };
+
+    const handlePrintHistory = (inv) => {
+        setSelectedInvoice(inv);
+        setTimeout(() => {
+            window.print();
+        }, 300);
     };
 
     const filtered = invoices.filter(inv => 
@@ -490,9 +504,19 @@ const KoiInvoices = () => {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <div className="flex gap-2 justify-end">
-                                                <button className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl transition-all"><Eye size={18} /></button>
-                                                <button className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl transition-all"><Printer size={18} /></button>
+                                            <div className="flex gap-2 justify-end no-print">
+                                                <button 
+                                                    onClick={() => handleViewInvoice(inv)}
+                                                    className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl transition-all"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handlePrintHistory(inv)}
+                                                    className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl transition-all"
+                                                >
+                                                    <Printer size={18} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -506,6 +530,149 @@ const KoiInvoices = () => {
                     </div>
                 </div>
             )}
+
+            {/* View Modal */}
+            <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Invoice Preview" maxWidth="max-w-4xl">
+                <div className="flex flex-col gap-6">
+                    <div className="flex justify-end gap-3 no-print mb-4">
+                        <button 
+                            onClick={handlePrint}
+                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-all"
+                        >
+                            <Printer size={14} /> Print
+                        </button>
+                        <button 
+                            onClick={() => {
+                                // Re-use the existing download logic but for the selected invoice
+                                if (typeof window.html2pdf === 'undefined') {
+                                    alert('PDF library is loading...');
+                                    return;
+                                }
+                                setIsExporting(true);
+                                setTimeout(() => {
+                                    const element = document.getElementById('view-invoice-to-print');
+                                    const opt = {
+                                        margin: [10, 10],
+                                        filename: `Koi_Invoice_${selectedInvoice?.invoiceNumber}.pdf`,
+                                        image: { type: 'jpeg', quality: 1.0 },
+                                        html2canvas: { scale: 3, useCORS: true },
+                                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                                    };
+                                    window.html2pdf().set(opt).from(element).save().then(() => setIsExporting(false));
+                                }, 300);
+                            }} 
+                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all"
+                        >
+                            <Download size={14} /> Download PDF
+                        </button>
+                    </div>
+
+                    <div className="overflow-auto bg-gray-100 p-8 rounded-2xl flex justify-center shadow-inner">
+                        {selectedInvoice && (
+                            <div className="bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative" id="view-invoice-to-print">
+                                {/* PROFESSIONAL TAX INVOICE TEMPLATE (READ ONLY) */}
+                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
+                                    <div style={{ textAlign: 'center', padding: '8px', fontWeight: 'bold', fontSize: '16px', background: '#fff7ed', color: '#ea580c', borderBottom: '1px solid #fed7aa', letterSpacing: '4px' }}>
+                                        TAX INVOICE
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                        <div style={{ borderRight: '1px solid #fed7aa' }}>
+                                            <div style={{ padding: '12px', borderBottom: '1px solid #fed7aa', textAlign: 'center' }}>
+                                                <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#ea580c', margin: 0 }}>{selectedInvoice.companyInfo?.name}</h2>
+                                                <p style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line' }}>{selectedInvoice.companyInfo?.address}</p>
+                                                <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>{selectedInvoice.companyInfo?.contact}</p>
+                                                <div style={{ background: '#fff7ed', padding: '4px', marginTop: '8px', fontSize: '11px', fontWeight: 'bold', color: '#ea580c' }}>
+                                                    GSTIN: {selectedInvoice.companyInfo?.gstin}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ background: '#ffedd5', padding: '6px', textAlign: 'center', borderBottom: '1px solid #fed7aa', fontWeight: 'bold', color: '#ea580c' }}>BILL TO</div>
+                                                <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <p style={{ fontWeight: 'bold', fontSize: '14px', margin: 0, color: '#111' }}>{selectedInvoice.billingInfo?.name}</p>
+                                                    <p style={{ fontSize: '11px', color: '#555', margin: 0 }}>{selectedInvoice.billingInfo?.address}</p>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>Phone:</b> {selectedInvoice.billingInfo?.phone}</p>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>GSTIN:</b> {selectedInvoice.billingInfo?.gstNo || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ display: 'flex', borderBottom: '1px solid #fed7aa', height: '40px' }}>
+                                                <div style={{ flex: 1, padding: '8px', fontWeight: 'bold', borderRight: '1px solid #fed7aa', display: 'flex', alignItems: 'center', color: '#ea580c' }}>INVOICE NO.</div>
+                                                <div style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>{selectedInvoice.invoiceNumber}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', borderBottom: '1px solid #fed7aa', height: '40px' }}>
+                                                <div style={{ flex: 1, padding: '8px', fontWeight: 'bold', borderRight: '1px solid #fed7aa', display: 'flex', alignItems: 'center', color: '#ea580c' }}>DATE</div>
+                                                <div style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center' }}>{new Date(selectedInvoice.date).toLocaleDateString()}</div>
+                                            </div>
+                                            <div style={{ padding: '20px', textAlign: 'center' }}>
+                                                <img src="/PVR.png" alt="Logo" style={{ maxHeight: '120px', maxWidth: '100%' }} />
+                                            </div>
+                                            <div style={{ borderTop: '1px solid #fed7aa', padding: '10px', textAlign: 'center' }}>
+                                                <span style={{ fontSize: '12px', fontWeight: 'black', color: '#ea580c', textTransform: 'uppercase' }}>TYPE: {selectedInvoice.type}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ background: '#ea580c', color: 'white' }}>
+                                                <th style={{ padding: '10px', border: '1px solid #c2410c' }}>SL</th>
+                                                <th style={{ padding: '10px', border: '1px solid #c2410c', textAlign: 'left' }}>ITEM DESCRIPTION</th>
+                                                <th style={{ padding: '10px', border: '1px solid #c2410c' }}>QTY</th>
+                                                <th style={{ padding: '10px', border: '1px solid #c2410c', textAlign: 'right' }}>PRICE</th>
+                                                <th style={{ padding: '10px', border: '1px solid #c2410c', textAlign: 'right' }}>TOTAL</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedInvoice.items?.map((item, i) => (
+                                                <tr key={i} style={{ height: '35px' }}>
+                                                    <td style={{ textAlign: 'center', border: '1px solid #eee' }}>{i + 1}</td>
+                                                    <td style={{ padding: '0 10px', border: '1px solid #eee', fontWeight: 'bold' }}>{item.name}</td>
+                                                    <td style={{ border: '1px solid #eee', textAlign: 'center' }}>{item.quantity}</td>
+                                                    <td style={{ border: '1px solid #eee', textAlign: 'right', paddingRight: '10px' }}>₹{item.price.toLocaleString()}</td>
+                                                    <td style={{ border: '1px solid #eee', textAlign: 'right', paddingRight: '10px', fontWeight: 'bold' }}>₹{item.total.toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                            {[...Array(Math.max(0, 8 - (selectedInvoice.items?.length || 0)))].map((_, i) => (
+                                                <tr key={i} style={{ height: '35px' }}><td style={{ border: '1px solid #eee' }}></td><td style={{ border: '1px solid #eee' }}></td><td style={{ border: '1px solid #eee' }}></td><td style={{ border: '1px solid #eee' }}></td><td style={{ border: '1px solid #eee' }}></td></tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div style={{ borderTop: '1px solid #fed7aa' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                            <div style={{ padding: '15px', borderRight: '1px solid #fed7aa' }}>
+                                                <p style={{ margin: 0, fontSize: '10px', color: '#888' }}>TOTAL IN WORDS</p>
+                                                <p style={{ margin: '5px 0 0 0', fontWeight: 'bold', color: '#ea580c' }}>{numberToWords(selectedInvoice.totalAmount)}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ padding: '8px 15px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee' }}>
+                                                    <span style={{ color: '#555', fontWeight: 'bold' }}>TRANSPORT</span>
+                                                    <span style={{ fontWeight: 'bold' }}>₹{(selectedInvoice.transportCharges || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', background: '#ffedd5', fontWeight: '900', color: '#ea580c', fontSize: '16px' }}>
+                                                    <span>GRAND TOTAL</span>
+                                                    <span>₹{selectedInvoice.totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', borderTop: '1px solid #fed7aa' }}>
+                                        <div style={{ padding: '15px', borderRight: '1px solid #fed7aa' }}>
+                                            <div style={{ background: '#ffedd5', padding: '5px 10px', fontSize: '10px', fontWeight: 'bold', color: '#ea580c', marginBottom: '10px' }}>BANK DETAILS</div>
+                                            <p style={{ margin: '2px 0', color: '#333' }}><b>Account:</b> {selectedInvoice.bankDetails?.accountNo}</p>
+                                            <p style={{ margin: '2px 0', color: '#333' }}><b>IFSC:</b> {selectedInvoice.bankDetails?.ifscCode}</p>
+                                            <p style={{ margin: '2px 0', color: '#333' }}><b>Bank:</b> {selectedInvoice.bankDetails?.bankName}</p>
+                                        </div>
+                                        <div style={{ height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '15px', textAlign: 'center' }}>
+                                            <p style={{ margin: 0, fontWeight: 'bold', color: '#111' }}>for {selectedInvoice.companyInfo?.name}</p>
+                                            <p style={{ margin: 0, fontSize: '10px', color: '#999' }}>Authorized Signature</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

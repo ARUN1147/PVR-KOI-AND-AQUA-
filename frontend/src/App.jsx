@@ -20,8 +20,7 @@ const Invoices = lazy(() => import('./pages/Aqua/Invoices'));
 // Lazy load Koi pages
 const KoiDashboard = lazy(() => import('./pages/Koi/KoiDashboard'));
 const KoiEnquiries = lazy(() => import('./pages/Koi/KoiEnquiries'));
-const KoiOrders = lazy(() => import('./pages/Koi/KoiOrders'));
-const KoiInvoices = lazy(() => import('./pages/Koi/KoiInvoices'));
+const KoiSales = lazy(() => import('./pages/Koi/KoiSales'));
 const KoiPayments = lazy(() => import('./pages/Koi/KoiPayments'));
 const KoiInventory = lazy(() => import('./pages/Koi/KoiInventory'));
 const KoiCustomers = lazy(() => import('./pages/Koi/KoiCustomers'));
@@ -68,17 +67,16 @@ function App() {
 
     return (
         <Router>
-            <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                    {/* Public Route */}
-                    <Route 
-                        path="/login" 
-                        element={isAuthenticated ? <Navigate to={getHomePath(role)} /> : <Login onLogin={(userRole, userModules) => { 
-                            setIsAuthenticated(true); 
-                            setRole(userRole);
-                            setAllocatedModules(userModules || []);
-                        }} />} 
-                    />
+            <Routes>
+                {/* Public Route */}
+                <Route 
+                    path="/login" 
+                    element={isAuthenticated ? <Navigate to={getHomePath(role)} /> : <Login onLogin={(userRole, userModules) => { 
+                        setIsAuthenticated(true); 
+                        setRole(userRole);
+                        setAllocatedModules(userModules || []);
+                    }} />} 
+                />
 
                     {/* Aqua Branch Experience */}
                     <Route 
@@ -117,8 +115,8 @@ function App() {
                         
                         <Route path="/boss/koi/dashboard" element={<KoiDashboard />} />
                         <Route path="/boss/koi/enquiries" element={<KoiEnquiries />} />
-                        <Route path="/boss/koi/orders" element={<KoiOrders />} />
-                        <Route path="/boss/koi/invoices" element={<KoiInvoices />} />
+                        <Route path="/boss/koi/orders" element={<KoiSales />} />
+                        <Route path="/boss/koi/invoices" element={<KoiSales />} />
                         <Route path="/boss/koi/payments" element={<KoiPayments />} />
                         <Route path="/boss/koi/inventory" element={<KoiInventory />} />
                         <Route path="/boss/koi/customers" element={<KoiCustomers />} />
@@ -131,8 +129,8 @@ function App() {
                     >
                         <Route path="dashboard" element={<KoiDashboard />} />
                         <Route path="enquiries" element={<KoiEnquiries />} />
-                        <Route path="orders" element={<KoiOrders />} />
-                        <Route path="invoices" element={<KoiInvoices />} />
+                        <Route path="orders" element={<KoiSales />} />
+                        <Route path="invoices" element={<KoiSales />} />
                         <Route path="payments" element={<KoiPayments />} />
                         <Route path="inventory" element={<KoiInventory />} />
                         <Route path="customers" element={<KoiCustomers />} />
@@ -149,7 +147,6 @@ function App() {
                     {/* Redirect any unknown routes */}
                     <Route path="*" element={<Navigate to={isAuthenticated ? getHomePath(role) : "/login"} />} />
                 </Routes>
-            </Suspense>
         </Router>
     );
 }

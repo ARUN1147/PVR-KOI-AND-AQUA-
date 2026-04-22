@@ -4,6 +4,11 @@ const koiOrderSchema = new mongoose.Schema({
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'KoiCustomer', required: true },
     enquiry: { type: mongoose.Schema.Types.ObjectId, ref: 'KoiEnquiry' },
     fishType: { type: String, required: true },
+    orderType: { 
+        type: String, 
+        enum: ['Fish', 'Food'], 
+        default: 'Fish' 
+    },
     quantity: { type: Number, required: true },
     price: { type: Number, required: true },
     totalAmount: { type: Number, required: true },

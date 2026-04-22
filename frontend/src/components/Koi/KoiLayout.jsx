@@ -49,8 +49,7 @@ const KoiLayout = () => {
     const menuItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/koi/dashboard' },
         { icon: MessageSquare, label: 'Enquiries', path: '/koi/enquiries' },
-        { icon: ShoppingCart, label: 'Orders', path: '/koi/orders' },
-        { icon: FileText, label: 'Invoices', path: '/koi/invoices' },
+        { icon: ShoppingCart, label: 'Sales & Billing', path: '/koi/orders' },
         { icon: CreditCard, label: 'Payments', path: '/koi/payments' },
         { icon: Package, label: 'Inventory', path: '/koi/inventory' },
         { icon: Users, label: 'Customers', path: '/koi/customers' },
@@ -150,7 +149,13 @@ const KoiLayout = () => {
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <Outlet />
+                    <React.Suspense fallback={
+                        <div className="flex items-center justify-center min-h-[400px]">
+                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-orange-600"></div>
+                        </div>
+                    }>
+                        <Outlet />
+                    </React.Suspense>
                 </main>
             </div>
         </div>
