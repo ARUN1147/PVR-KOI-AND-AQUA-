@@ -16,27 +16,28 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/customers', require('./routes/customerRoutes'));
-app.use('/api/products', require('./routes/productRoutes'));
-app.use('/api/orders', require('./routes/orderRoutes'));
-app.use('/api/tasks', require('./routes/taskRoutes'));
-app.use('/api/complaints', require('./routes/complaintRoutes'));
-app.use('/api/services', require('./routes/serviceRoutes'));
-app.use('/api/employees', require('./routes/employeeRoutes'));
+// Routes
+app.use('/api/auth', require('./routes/Auth/authRoutes'));
+app.use('/api/users', require('./routes/Boss/userRoutes'));
+app.use('/api/customers', require('./routes/Aqua/customerRoutes'));
+app.use('/api/products', require('./routes/Aqua/productRoutes'));
+app.use('/api/orders', require('./routes/Aqua/orderRoutes'));
+app.use('/api/tasks', require('./routes/Staff/taskRoutes'));
+app.use('/api/complaints', require('./routes/Aqua/complaintRoutes'));
+app.use('/api/services', require('./routes/Aqua/serviceRoutes'));
+app.use('/api/employees', require('./routes/Boss/employeeRoutes'));
 
 // Koi Centre Routes
 const { protect, authorize } = require('./middleware/authMiddleware');
 const KOI_ROLES = ['BOSS', 'MANAGER', 'admin', 'KOI_MANAGER', 'STAFF', 'BRANCH_MANAGER'];
 
-app.use('/api/koi/enquiries', protect, authorize(...KOI_ROLES), require('./routes/koiEnquiryRoutes'));
-app.use('/api/koi/orders', protect, authorize(...KOI_ROLES), require('./routes/koiOrderRoutes'));
-app.use('/api/koi/invoices', protect, authorize(...KOI_ROLES), require('./routes/koiInvoiceRoutes'));
-app.use('/api/koi/payments', protect, authorize(...KOI_ROLES), require('./routes/koiPaymentRoutes'));
-app.use('/api/koi/inventory', protect, authorize(...KOI_ROLES), require('./routes/koiInventoryRoutes'));
-app.use('/api/koi/customers', protect, authorize(...KOI_ROLES), require('./routes/koiCustomerRoutes'));
-app.use('/api/koi/suppliers', protect, authorize(...KOI_ROLES), require('./routes/supplierRoutes'));
+app.use('/api/koi/enquiries', protect, authorize(...KOI_ROLES), require('./routes/Koi/koiEnquiryRoutes'));
+app.use('/api/koi/orders', protect, authorize(...KOI_ROLES), require('./routes/Koi/koiOrderRoutes'));
+app.use('/api/koi/invoices', protect, authorize(...KOI_ROLES), require('./routes/Koi/koiInvoiceRoutes'));
+app.use('/api/koi/payments', protect, authorize(...KOI_ROLES), require('./routes/Koi/koiPaymentRoutes'));
+app.use('/api/koi/inventory', protect, authorize(...KOI_ROLES), require('./routes/Koi/koiInventoryRoutes'));
+app.use('/api/koi/customers', protect, authorize(...KOI_ROLES), require('./routes/Koi/koiCustomerRoutes'));
+app.use('/api/koi/suppliers', protect, authorize(...KOI_ROLES), require('./routes/Koi/supplierRoutes'));
 
 
 // Database Connection
