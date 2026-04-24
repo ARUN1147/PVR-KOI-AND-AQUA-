@@ -1,33 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Users, 
-    ShoppingCart, 
-    TrendingUp, 
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+    Users,
+    ShoppingCart,
+    TrendingUp,
     AlertCircle,
     ArrowUpRight,
     ArrowDownRight,
     Clock,
     CheckCircle2,
-    Package
+    Package,
+    Fish,
+    ArrowRight,
+    CreditCard
 } from 'lucide-react';
 import { getKoiOrders, getPendingKoiPayments, getLowKoiStock } from '../../services/api';
 
-const StatCard = ({ title, value, icon: Icon, trend, trendValue, color }) => (
-    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 group">
-        <div className="flex items-start justify-between mb-4">
-            <div className={`p-4 rounded-2xl ${color} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                <Icon size={24} />
-            </div>
-            {trend && (
-                <div className={`flex items-center gap-1 text-sm font-bold ${trend === 'up' ? 'text-emerald-500' : 'text-red-500'} bg-gray-50 px-3 py-1 rounded-full`}>
-                    {trend === 'up' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                    {trendValue}
-                </div>
-            )}
+const StatCard = ({ title, value, icon: Icon, color, delay }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay }}
+        className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50 flex flex-col gap-4 hover:shadow-md transition-all group"
+    >
+        <div className={`w-12 h-12 rounded-2xl ${color} bg-opacity-10 flex items-center justify-center text-${color.split('-')[1]}-600 group-hover:scale-110 transition-transform`}>
+            <Icon size={24} />
         </div>
-        <h3 className="text-gray-500 font-bold text-xs uppercase tracking-widest italic ml-1">{title}</h3>
-        <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
-    </div>
+        <div>
+            <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{title}</h3>
+            <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+        </div>
+    </motion.div>
 );
 
 const KoiDashboard = () => {
@@ -60,146 +64,133 @@ const KoiDashboard = () => {
     }, []);
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-4xl font-black text-gray-900 font-display italic tracking-tight uppercase">Dashboard</h1>
-                    <p className="text-gray-400 font-medium mt-1">Real-time overview of your Koi Centre operations</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex -space-x-3">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-10 w-10 rounded-full border-4 border-gray-50 bg-gray-200 overflow-hidden shadow-sm">
-                                <img src={`https://i.pravatar.cc/150?u=${i}`} alt="user" />
-                            </div>
-                        ))}
+        <div className="py-6">
+            {/* Banner */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative bg-[#E6F0FF] rounded-[3rem] p-12 overflow-hidden mb-12"
+            >
+                <div className="relative z-10 max-w-lg">
+                    <h1 className="text-4xl font-bold text-[#1a365d] mb-4 leading-tight">
+                        Koi Hub <br />
+                        <span className="text-[#2988FF]">Centre Operations</span>
+                    </h1>
+                    <p className="text-[#1a365d]/60 font-medium mb-8">
+                        Track premium koi inventory, manage high-value sales & enquiries.
+                    </p>
+                    <div className="flex gap-4">
+                        <button className="bg-[#1a365d] text-white px-8 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-900/20 hover:opacity-90 transition-all active:scale-95 flex items-center gap-2">
+                            New Sale <ArrowRight size={16} />
+                        </button>
                     </div>
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest italic ml-2">3 Managers Online</span>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard 
-                    title="Total Orders" 
-                    value={stats.totalOrders} 
-                    icon={ShoppingCart} 
-                    trend="up" 
-                    trendValue="+12%" 
+                <div className="absolute right-0 top-0 w-1/2 h-full hidden lg:flex items-center justify-center opacity-20">
+                    <Fish size={240} className="text-[#2988FF]" />
+                </div>
+            </motion.div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <StatCard
+                    title="Total Orders"
+                    value={stats.totalOrders}
+                    icon={ShoppingCart}
                     color="bg-orange-500"
+                    delay={0.1}
                 />
-                <StatCard 
-                    title="Pending Payments" 
-                    value={stats.pendingPayments} 
-                    icon={Clock} 
-                    trend="down" 
-                    trendValue="-5%" 
+                <StatCard
+                    title="Pending Payments"
+                    value={stats.pendingPayments}
+                    icon={CreditCard}
                     color="bg-red-500"
+                    delay={0.2}
                 />
-                <StatCard 
-                    title="Low Stock Items" 
-                    value={stats.lowStockItems} 
-                    icon={AlertCircle} 
+                <StatCard
+                    title="Low Stock"
+                    value={stats.lowStockItems}
+                    icon={AlertCircle}
                     color="bg-amber-500"
+                    delay={0.3}
                 />
-                <StatCard 
-                    title="Top Customers" 
-                    value="124" 
-                    icon={Users} 
-                    trend="up" 
-                    trendValue="+8%" 
+                <StatCard
+                    title="Customers"
+                    value="124"
+                    icon={Users}
                     color="bg-indigo-500"
+                    delay={0.4}
                 />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-8 border-b border-gray-50 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-gray-900 rounded-2xl text-white shadow-lg shadow-gray-200">
-                                <TrendingUp size={20} />
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-900 font-display italic uppercase">Recent Activity</h2>
-                        </div>
-                    </div>
-                    <div className="p-0 overflow-x-auto">
+                <div className="lg:col-span-2">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h2>
+                    <div className="bg-white rounded-[2.5rem] p-4 border border-gray-50 shadow-sm overflow-hidden">
                         <table className="w-full text-left">
-                            <thead className="bg-gray-50/50">
-                                <tr>
-                                    <th className="px-8 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest italic border-b border-gray-100">Order ID</th>
-                                    <th className="px-8 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest italic border-b border-gray-100">Customer</th>
-                                    <th className="px-8 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest italic border-b border-gray-100">Status</th>
-                                    <th className="px-8 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest italic border-b border-gray-100">Total</th>
+                            <thead>
+                                <tr className="border-b border-gray-50">
+                                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Amount</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {stats.recentOrders.length > 0 ? stats.recentOrders.map((order) => (
-                                    <tr key={order._id} className="hover:bg-gray-50/50 transition-colors group">
-                                        <td className="px-8 py-5 text-sm font-bold text-gray-900 font-display">#{order._id.slice(-6).toUpperCase()}</td>
-                                        <td className="px-8 py-5">
+                            <tbody>
+                                {stats.recentOrders.map((order, i) => (
+                                    <motion.tr
+                                        key={order._id}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.1 }}
+                                        className="hover:bg-[#F0F7FF]/50 transition-all group cursor-pointer"
+                                    >
+                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">#{order._id.slice(-6).toUpperCase()}</td>
+                                        <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold">
-                                                    {order.customer?.name?.[0].toUpperCase()}
+                                                <div className="w-8 h-8 rounded-full bg-[#E6F0FF] text-[#2988FF] flex items-center justify-center text-xs font-bold">
+                                                    {order.customer?.name?.[0]}
                                                 </div>
-                                                <span className="text-sm font-semibold text-gray-600">{order.customer?.name}</span>
+                                                <span className="text-sm font-medium text-gray-600">{order.customer?.name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                                                order.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'
-                                            }`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full ${order.status === 'Completed' ? 'bg-emerald-500' : 'bg-orange-500'}`}></div>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${order.status === 'Completed' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                                                }`}>
                                                 {order.status}
                                             </span>
                                         </td>
-                                        <td className="px-8 py-5 text-sm font-bold text-gray-900">₹{order.totalAmount}</td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan="4" className="px-8 py-10 text-center text-gray-400 italic">No recent orders found</td>
-                                    </tr>
-                                )}
+                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">₹{order.totalAmount}</td>
+                                    </motion.tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 flex flex-col">
-                    <h2 className="text-xl font-bold text-gray-900 font-display italic uppercase mb-6 flex items-center gap-3">
-                        <div className="p-3 bg-red-500 rounded-2xl text-white shadow-lg shadow-red-100">
-                            <AlertCircle size={20} />
-                        </div>
-                        Critical Alerts
-                    </h2>
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Alerts</h2>
                     <div className="space-y-4">
                         {stats.lowStockItems > 0 && (
-                            <div className="p-4 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-4 group hover:bg-amber-100 transition-colors duration-300">
-                                <div className="p-2 bg-amber-500 rounded-xl text-white shadow-md">
-                                    <Package size={18} />
+                            <div className="p-6 bg-[#2988FF] rounded-[2rem] text-white shadow-lg shadow-blue-900/20 relative overflow-hidden group">
+                                <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                    <Package size={100} />
                                 </div>
-                                <div>
-                                    <h4 className="text-sm font-bold text-amber-900 uppercase tracking-tight italic">Low Stock Warning</h4>
-                                    <p className="text-xs text-amber-700 font-medium mt-1 leading-relaxed">{stats.lowStockItems} items are below the threshold. Restock soon to avoid disruptions.</p>
-                                </div>
+                                <h4 className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Inventory</h4>
+                                <p className="text-2xl font-bold mb-1">{stats.lowStockItems} Items Low</p>
+                                <p className="text-[10px] font-medium opacity-70 leading-relaxed mb-4">Stock levels critically low across multiple koi varieties.</p>
+                                <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all">Restock Now</button>
                             </div>
                         )}
-                        {stats.pendingPayments > 0 && (
-                            <div className="p-4 bg-red-50 border border-red-100 rounded-3xl flex items-start gap-4 group hover:bg-red-100 transition-colors duration-300">
-                                <div className="p-2 bg-red-500 rounded-xl text-white shadow-md">
-                                    <Clock size={18} />
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-bold text-red-900 uppercase tracking-tight italic">Pending Payments</h4>
-                                    <p className="text-xs text-red-700 font-medium mt-1 leading-relaxed">{stats.pendingPayments} orders have overdue payments. Follow up with customers.</p>
-                                </div>
+
+                        <div className="p-6 bg-[#1a365d] rounded-[2rem] text-white shadow-lg shadow-blue-900/20 relative overflow-hidden group">
+                            <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
+                                <Clock size={100} />
                             </div>
-                        )}
-                        <div className="p-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2rem] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-8 transform translate-x-4 -translate-y-4 text-white/10 group-hover:scale-125 transition-transform duration-700">
-                                <ArrowUpRight size={120} />
-                            </div>
-                            <h4 className="text-lg font-bold font-display italic uppercase">Premium Feature</h4>
-                            <p className="text-sm text-indigo-100 mt-2 font-medium leading-relaxed">Unlock advanced AI-powered sales forecasting and customer insights.</p>
-                            <button className="mt-4 px-6 py-2 bg-white text-indigo-600 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-indigo-50 transition-colors">Upgrade Now</button>
+                            <h4 className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Finance</h4>
+                            <p className="text-2xl font-bold mb-1">{stats.pendingPayments} Pending</p>
+                            <p className="text-[10px] font-medium opacity-70 leading-relaxed mb-4">Follow up on high-value koi sales payments.</p>
+                            <Link to="/koi/payments" className="block w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all text-center">Open Payments</Link>
                         </div>
                     </div>
                 </div>

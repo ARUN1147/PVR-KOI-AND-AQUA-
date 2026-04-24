@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
     Users,
     ShoppingCart,
@@ -11,26 +12,29 @@ import {
     Package,
     AlertCircle,
     Wrench,
-    Loader2
+    Loader2,
+    ArrowRight,
+    Droplets
 } from 'lucide-react';
 import { getCustomers, getOrders, getTasks, getProducts } from '../../services/api';
 
-const StatCard = ({ title, value, icon: Icon, trend, color, loading }) => (
-    <div className="card group hover:shadow-md transition-all duration-300">
-        <div className="flex justify-between items-start mb-4">
-            <div className={`p-3 rounded-2xl ${color} bg-opacity-10 text-${color.split('-')[1]}-600`}>
-                <Icon size={24} />
-            </div>
-            {!loading && trend && (
-                <span className={`flex items-center text-xs font-bold ${trend > 0 ? 'text-green-500' : 'text-red-500'} bg-gray-50 px-2 py-1 rounded-full`}>
-                    {trend > 0 ? '+' : ''}{trend}%
-                    <TrendingUp size={12} className="ml-1" />
-                </span>
-            )}
+const StatCard = ({ title, value, icon: Icon, color, loading, delay }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay }}
+        className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50 flex flex-col gap-4 hover:shadow-md transition-all group"
+    >
+        <div className={`w-12 h-12 rounded-2xl ${color} bg-opacity-10 flex items-center justify-center text-${color.split('-')[1]}-600 group-hover:scale-110 transition-transform`}>
+            <Icon size={24} />
         </div>
-        <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{loading ? <Loader2 className="animate-spin text-gray-300" size={24} /> : value}</p>
-    </div>
+        <div>
+            <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{title}</h3>
+            <p className="text-2xl font-bold text-gray-900 mt-1">
+                {loading ? <Loader2 className="animate-spin text-gray-200" size={20} /> : value}
+            </p>
+        </div>
+    </motion.div>
 );
 
 const Dashboard = () => {
@@ -74,92 +78,124 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 font-display italic leading-tight">Welcome to Aqua Manager</h1>
-                    <p className="text-gray-500 mt-1 uppercase text-xs font-bold tracking-widest italic opacity-70">Aquaculture Operations Control Center</p>
+        <div className="py-6">
+            {/* Banner */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative bg-[#E6F0FF] rounded-[3rem] p-12 overflow-hidden mb-12"
+            >
+                <div className="relative z-10 max-w-lg">
+                    <h1 className="text-4xl font-bold text-[#1a365d] mb-4 leading-tight">
+                        Aqua Hub <br />
+                        <span className="text-[#2988FF]">Operations Manager</span>
+                    </h1>
+                    <p className="text-[#1a365d]/60 font-medium mb-8">
+                        Monitor aquaculture operations, inventory health, and field task distribution.
+                    </p>
+                    <div className="flex gap-4">
+                        <button className="bg-[#1a365d] text-white px-8 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-blue-900/20 hover:opacity-90 transition-all active:scale-95 flex items-center gap-2">
+                            New Task <ArrowRight size={16} />
+                        </button>
+                    </div>
                 </div>
-                <button className="btn-primary">
-                    <Calendar size={18} />
-                    <span>Generate Report</span>
-                </button>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="absolute right-0 top-0 w-1/2 h-full hidden lg:flex items-center justify-center opacity-20">
+                    <Droplets size={240} className="text-[#2988FF]" />
+                </div>
+            </motion.div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                 <StatCard
                     title="Total Customers"
                     value={stats.customers}
                     icon={Users}
-                    color="bg-primary-500"
+                    color="bg-blue-500"
                     loading={loading}
+                    delay={0.1}
                 />
                 <StatCard
                     title="Active Orders"
                     value={stats.orders}
                     icon={ShoppingCart}
-                    color="bg-aqua-500"
+                    color="bg-cyan-500"
                     loading={loading}
+                    delay={0.2}
                 />
                 <StatCard
                     title="Pending Payments"
                     value={`₹${(stats.balance / 1000).toFixed(1)}K`}
                     icon={Wallet}
-                    color="bg-orange-500"
+                    color="bg-red-500"
                     loading={loading}
+                    delay={0.3}
                 />
                 <StatCard
                     title="Ongoing Tasks"
                     value={stats.tasks}
                     icon={Clock}
-                    color="bg-purple-500"
+                    color="bg-indigo-500"
                     loading={loading}
+                    delay={0.4}
                 />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 card">
+                <div className="lg:col-span-2">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-gray-900 font-display">Tasks in Progress</h2>
-                        <Link to="/tasks" className="text-primary-600 text-sm font-semibold hover:underline border-b-2 border-primary-50">View all</Link>
+                        <h2 className="text-xl font-bold text-gray-900">Recent Tasks</h2>
+                        <Link to="/tasks" className="text-[#2988FF] text-xs font-bold uppercase tracking-widest hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4">
-                        {stats.recentTasks.map((task) => (
-                            <div key={task._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all cursor-pointer group">
+
+                    <div className="bg-white rounded-[2.5rem] p-8 border border-gray-50 shadow-sm space-y-4">
+                        {stats.recentTasks.map((task, i) => (
+                            <motion.div
+                                key={task._id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="flex items-center justify-between p-5 bg-[#F5F9FC]/50 rounded-[1.5rem] hover:bg-white hover:shadow-md border border-transparent hover:border-gray-100 transition-all cursor-pointer group"
+                            >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                        <Wrench size={18} />
+                                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-blue-600 shadow-sm group-hover:bg-[#2988FF] group-hover:text-white transition-all">
+                                        <Wrench size={20} />
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold text-gray-900 text-sm">{task.description}</h4>
-                                        <p className="text-xs text-gray-500 italic mt-0.5">{task.customerId?.name} • {task.assignedStaff}</p>
+                                        <h4 className="font-bold text-gray-900 text-sm">{task.description}</h4>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-0.5">{task.assignedStaff}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="px-3 py-1 bg-blue-100 text-blue-600 text-[10px] uppercase font-bold rounded-full">{task.status}</span>
-                                    <ArrowUpRight size={16} className="text-gray-400 group-hover:text-primary-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                                </div>
-                            </div>
+                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-blue-50 text-blue-600`}>
+                                    {task.status}
+                                </span>
+                            </motion.div>
                         ))}
-                        {stats.recentTasks.length === 0 && <p className="text-center py-8 text-gray-400 italic">No tasks active.</p>}
+                        {stats.recentTasks.length === 0 && <p className="text-center py-12 text-gray-400 italic font-medium">No tasks found.</p>}
                     </div>
                 </div>
 
-                <div className="card border-none bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-2xl relative overflow-hidden">
-                    <div className="absolute -bottom-10 -right-10 opacity-5">
-                        <Package size={200} />
-                    </div>
-                    <div className="relative z-10 h-full flex flex-col">
-                        <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-lg font-bold font-display italic">Inventory Health</h2>
-                            <AlertCircle size={20} className={stats.lowStock > 0 ? "text-red-400 animate-pulse" : "text-gray-500"} />
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Inventory Health</h2>
+                    <div className="bg-indigo-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden h-[300px] flex flex-col justify-between shadow-xl shadow-indigo-900/20">
+                        <div className="absolute -right-10 -bottom-10 opacity-10">
+                            <Package size={200} />
                         </div>
-                        <div className="flex-1 flex flex-col justify-center items-center text-center">
-                            <p className="text-4xl font-bold font-display">{stats.lowStock}</p>
-                            <p className="text-gray-400 text-xs uppercase font-bold tracking-widest mt-2 italic">Low Stock Items</p>
+
+                        <div className="relative z-10 flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                                <AlertCircle size={20} className={stats.lowStock > 0 ? "text-red-400 animate-pulse" : "text-white/40"} />
+                            </div>
+                            <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Global Stock</span>
                         </div>
-                        <Link to="/inventory" className="mt-8 w-full py-3 bg-white/10 hover:bg-white/20 text-white text-center rounded-xl text-xs font-bold transition-colors uppercase tracking-widest">
-                            Manage Inventory
+
+                        <div className="relative z-10 flex flex-col items-center">
+                            <p className="text-5xl font-bold italic">{stats.lowStock}</p>
+                            <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest mt-2">Low Stock Alerts</p>
+                        </div>
+
+                        <Link to="/inventory" className="relative z-10 w-full py-3 bg-white/10 hover:bg-white/20 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all text-center">
+                            Manage Storage
                         </Link>
                     </div>
                 </div>

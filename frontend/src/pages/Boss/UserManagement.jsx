@@ -65,22 +65,22 @@ const UserManagement = () => {
     const handleOpenModal = (user = null) => {
         if (user) {
             setEditingUser(user);
-            setFormData({ 
-                name: user.name, 
-                email: user.email, 
-                password: '', 
-                role: user.role, 
+            setFormData({
+                name: user.name,
+                email: user.email,
+                password: '',
+                role: user.role,
                 branch: user.branch,
                 allocatedModules: user.allocatedModules || [],
                 employeeId: user.employeeId || ''
             });
         } else {
             setEditingUser(null);
-            setFormData({ 
-                name: '', 
-                email: '', 
-                password: '', 
-                role: 'admin', 
+            setFormData({
+                name: '',
+                email: '',
+                password: '',
+                role: 'admin',
                 branch: 'Aqua Culture',
                 allocatedModules: [],
                 employeeId: ''
@@ -115,16 +115,16 @@ const UserManagement = () => {
     };
 
     const filteredUsers = users.filter(user => {
-        const matchesSearch = (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
-                             (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+        const matchesSearch = (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
         const matchesBranch = selectedBranch === 'All Branches' || user.branch === selectedBranch;
         const matchesRole = selectedRole === 'All Roles' || user.role === selectedRole;
-        
+
         return matchesSearch && matchesBranch && matchesRole;
     });
 
     return (
-        <div className="p-8 bg-gray-50 min-h-screen">
+        <div className="py-6">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-10">
                     <div>
@@ -134,7 +134,7 @@ const UserManagement = () => {
                         </h1>
                         <p className="text-gray-500 mt-1">Manage system-wide access for Managers and Employees</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => handleOpenModal()}
                         className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
                     >
@@ -147,16 +147,16 @@ const UserManagement = () => {
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row gap-4">
                     <div className="flex-1 relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="Search by name or email..." 
+                        <input
+                            type="text"
+                            placeholder="Search by name or email..."
                             className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100 placeholder:text-gray-400"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <div className="flex gap-4">
-                        <select 
+                        <select
                             className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-medium text-gray-600 focus:ring-2 focus:ring-indigo-100"
                             value={selectedBranch}
                             onChange={(e) => setSelectedBranch(e.target.value)}
@@ -165,7 +165,7 @@ const UserManagement = () => {
                             <option value="Aqua Culture">Aqua Culture</option>
                             <option value="Koi Centre">Koi Centre</option>
                         </select>
-                        <select 
+                        <select
                             className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-medium text-gray-600 focus:ring-2 focus:ring-indigo-100"
                             value={selectedRole}
                             onChange={(e) => setSelectedRole(e.target.value)}
@@ -213,12 +213,11 @@ const UserManagement = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5">
-                                        <span className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
-                                            user.role === 'MANAGER' ? 'bg-purple-100 text-purple-600' :
-                                            user.role === 'admin' ? 'bg-indigo-100 text-indigo-600' :
-                                            user.role === 'KOI_MANAGER' ? 'bg-orange-100 text-orange-600' :
-                                            'bg-blue-100 text-blue-600'
-                                        }`}>
+                                        <span className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${user.role === 'MANAGER' ? 'bg-purple-100 text-purple-600' :
+                                                user.role === 'admin' ? 'bg-indigo-100 text-indigo-600' :
+                                                    user.role === 'KOI_MANAGER' ? 'bg-orange-100 text-orange-600' :
+                                                        'bg-blue-100 text-blue-600'
+                                            }`}>
                                             {user.role}
                                         </span>
                                     </td>
@@ -261,40 +260,40 @@ const UserManagement = () => {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Display Name</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     required
                                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100 py-4"
                                     value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Email Address</label>
-                                <input 
-                                    type="email" 
+                                <input
+                                    type="email"
                                     required
                                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100 py-4"
                                     value={formData.email}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </div>
                             {!editingUser && (
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Password</label>
-                                    <input 
-                                        type="password" 
+                                    <input
+                                        type="password"
                                         required
                                         className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100 py-4"
                                         value={formData.password}
-                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     />
                                 </div>
                             )}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">System Role</label>
-                                    <select 
+                                    <select
                                         className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100"
                                         value={formData.role}
                                         onChange={(e) => handleRoleChange(e.target.value)}
@@ -308,10 +307,10 @@ const UserManagement = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Assigned Branch</label>
-                                    <select 
+                                    <select
                                         className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100"
                                         value={formData.branch}
-                                        onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                                     >
                                         <option value="Aqua Culture">Aqua Culture</option>
                                         <option value="Koi Centre">Koi Centre</option>
@@ -321,10 +320,10 @@ const UserManagement = () => {
 
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Linked Employee (Required for Staff)</label>
-                                <select 
+                                <select
                                     className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100"
                                     value={formData.employeeId}
-                                    onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
                                 >
                                     <option value="">Select Employee</option>
                                     {employees.map(emp => (
@@ -332,7 +331,7 @@ const UserManagement = () => {
                                     ))}
                                 </select>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Module Allocation</label>
                                 <div className="grid grid-cols-2 gap-4 bg-gray-50 p-6 rounded-2xl max-h-48 overflow-y-auto">
@@ -340,16 +339,16 @@ const UserManagement = () => {
                                         <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-2">Aqua Culture</p>
                                         {['Dashboard', 'Customers', 'Inventory', 'Complaints', 'Enquiry & Orders', 'Tasks', 'Services', 'Employees', 'Invoices'].map(mod => (
                                             <label key={`aqua-${mod}`} className="flex items-center gap-3 cursor-pointer group">
-                                                <input 
-                                                    type="checkbox" 
+                                                <input
+                                                    type="checkbox"
                                                     className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-100 border-gray-300"
                                                     checked={formData.allocatedModules.includes(`Aqua:${mod}`)}
                                                     onChange={(e) => {
                                                         const modName = `Aqua:${mod}`;
-                                                        const newMods = e.target.checked 
+                                                        const newMods = e.target.checked
                                                             ? [...formData.allocatedModules, modName]
                                                             : formData.allocatedModules.filter(m => m !== modName);
-                                                        setFormData({...formData, allocatedModules: newMods});
+                                                        setFormData({ ...formData, allocatedModules: newMods });
                                                     }}
                                                 />
                                                 <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">{mod}</span>
@@ -360,16 +359,16 @@ const UserManagement = () => {
                                         <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-2">Koi Centre</p>
                                         {['Dashboard', 'Enquiries', 'Orders', 'Invoices', 'Payments', 'Inventory', 'Customers'].map(mod => (
                                             <label key={`koi-${mod}`} className="flex items-center gap-3 cursor-pointer group">
-                                                <input 
-                                                    type="checkbox" 
+                                                <input
+                                                    type="checkbox"
                                                     className="w-4 h-4 rounded text-orange-600 focus:ring-orange-100 border-gray-300"
                                                     checked={formData.allocatedModules.includes(`Koi:${mod}`)}
                                                     onChange={(e) => {
                                                         const modName = `Koi:${mod}`;
-                                                        const newMods = e.target.checked 
+                                                        const newMods = e.target.checked
                                                             ? [...formData.allocatedModules, modName]
                                                             : formData.allocatedModules.filter(m => m !== modName);
-                                                        setFormData({...formData, allocatedModules: newMods});
+                                                        setFormData({ ...formData, allocatedModules: newMods });
                                                     }}
                                                 />
                                                 <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">{mod}</span>

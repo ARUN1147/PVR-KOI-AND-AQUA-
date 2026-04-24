@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
     LayoutDashboard,
     Users,
@@ -14,26 +15,43 @@ import {
     X,
     Fish,
     FileText,
-    CreditCard
+    CreditCard,
+    ChevronRight,
+    Shield,
+    Plus
 } from 'lucide-react';
 
-const SidebarItem = ({ icon: Icon, label, path, active, collapsed }) => (
+const SidebarIcon = ({ icon: Icon, path, label, active, expanded }) => (
     <Link
         to={path}
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${active
-            ? 'bg-orange-600 text-white shadow-lg shadow-orange-200'
-            : 'text-gray-500 hover:bg-orange-50 hover:text-orange-600'
-            }`}
+        className={`relative group flex items-center ${expanded ? 'justify-start px-4 gap-4 w-[90%]' : 'justify-center w-12'} h-12 rounded-2xl transition-all duration-300 ${active
+            ? 'bg-white text-[#2988FF] shadow-lg'
+            : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
     >
-        <Icon size={20} className={active ? 'text-white' : 'group-hover:text-orange-600'} />
-        {!collapsed && <span className="font-medium">{label}</span>}
+        <Icon size={24} strokeWidth={2} className="shrink-0" />
+        {expanded && (
+            <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-sm font-bold whitespace-nowrap overflow-hidden"
+            >
+                {label}
+            </motion.span>
+        )}
+        {active && !expanded && (
+            <motion.div
+                layoutId="activeSideKoi"
+                className="absolute -right-4 w-1.5 h-8 bg-white rounded-l-full"
+            />
+        )}
     </Link>
 );
 
 const KoiLayout = () => {
-    const [collapsed, setCollapsed] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const location = useLocation();
-    const navigate = useNavigate();
+    const role = localStorage.getItem('role');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const getAllocatedModules = () => {
         try {
@@ -43,7 +61,6 @@ const KoiLayout = () => {
         }
     };
 
-    const role = localStorage.getItem('role');
     const allocatedModules = getAllocatedModules();
 
     const menuItems = [
@@ -65,98 +82,80 @@ const KoiLayout = () => {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-            {/* Sidebar */}
-            <aside
-                className={`${collapsed ? 'w-20' : 'w-72'
-                    } bg-white border-r border-gray-100 flex flex-col transition-all duration-300 ease-in-out z-30`}
+        <div className="flex h-screen bg-[#F0F7FF] overflow-hidden font-sans">
+            {/* Sidebar (Expandable Blue Bar) */}
+            <motion.aside
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                initial={false}
+                animate={{ width: isHovered ? 240 : 96 }}
+                className="bg-[#2988FF] flex flex-col items-center py-8 gap-8 z-50 shadow-2xl transition-all duration-300"
             >
-                <div className="p-6 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <Fish size={24} />
-                    </div>
-                    {!collapsed && (
-                        <div className="flex flex-col">
-                            <span className="text-xl font-bold text-gray-900 font-display italic">KOI CENTRE</span>
-                            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">MANAGEMENT</span>
-                        </div>
-                    )}
+                <div className={`${isHovered ? 'w-48' : 'w-12'} h-12 px-2 flex items-center justify-center transition-all duration-300`}>
+                    <img src="/PVR.png" alt="PVR" className="w-full h-full object-contain filter brightness-0 invert" />
                 </div>
 
-                <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto">
-                    {menuItems.map((item) => (
-                        <SidebarItem
-                            key={item.path}
-                            {...item}
+                <div className="flex-1 flex flex-col items-center gap-4 w-full">
+                    {menuItems.map((item, idx) => (
+                        <SidebarIcon
+                            key={idx}
+                            icon={item.icon}
+                            path={item.path}
+                            label={item.label}
                             active={location.pathname === item.path}
-                            collapsed={collapsed}
+                            expanded={isHovered}
                         />
                     ))}
-                </nav>
 
-                <div className="p-4 border-t border-gray-100">
-                    <button 
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-3 w-full text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-200"
-                    >
-                        <LogOut size={20} />
-                        {!collapsed && <span className="font-medium">Logout</span>}
-                    </button>
+                    <div className="w-full flex flex-col items-center gap-2 mt-4 border-t border-white/10 pt-6">
+                        <SidebarIcon icon={Users} path="#" label="Staff" active={false} expanded={isHovered} />
+                        <SidebarIcon icon={Shield} path="#" label="Security" active={false} expanded={isHovered} />
+                        <SidebarIcon icon={Plus} path="#" label="Add New" active={false} expanded={isHovered} />
+                    </div>
                 </div>
-            </aside>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Navbar */}
-                <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 z-20">
-                    <button
-                        onClick={() => setCollapsed(!collapsed)}
-                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
-                    >
-                        {collapsed ? <Menu size={20} /> : <X size={20} />}
-                    </button>
+                <button
+                    onClick={handleLogout}
+                    className={`flex items-center ${isHovered ? 'justify-start px-6 gap-4 w-[85%]' : 'justify-center w-12'} h-12 rounded-2xl text-white/70 hover:bg-white/10 hover:text-white transition-all`}
+                >
+                    <LogOut size={24} className="shrink-0" />
+                    {isHovered && <span className="text-sm font-bold">Logout</span>}
+                </button>
+            </motion.aside>
 
-                    <div className="flex items-center gap-6">
-                        <div className="hidden md:flex items-center bg-gray-100 px-4 py-2 rounded-full w-96">
-                            <Search size={18} className="text-gray-400" />
+            {/* Content Wrapper */}
+            <div className="flex-1 flex bg-[#F0F7FF] relative">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white m-4 rounded-[3rem] shadow-xl shadow-blue-900/5 relative">
+                    <header className="h-20 flex items-center px-12 gap-8">
+                        <div className="flex-1 relative max-w-xl group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2988FF] transition-colors" size={20} />
                             <input
                                 type="text"
                                 placeholder="Search Koi database..."
-                                className="bg-transparent border-none focus:ring-0 text-sm ml-2 w-full"
+                                className="w-full bg-[#F5F9FC] border-none rounded-2xl py-3 pl-12 pr-6 focus:ring-2 focus:ring-[#2988FF]/50 transition-all text-sm font-medium"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500 relative transition-colors">
-                                <Bell size={20} />
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full border-2 border-white"></span>
-                            </button>
-
-                            <div className="h-8 w-px bg-gray-200"></div>
-
-                            <div className="flex items-center gap-3">
-                                <div className="flex flex-col items-end">
-                                    <span className="text-sm font-semibold text-gray-900 leading-none">{role === 'BOSS' ? 'Boss' : (role === 'MANAGER' ? 'Gen. Manager' : 'Officer')}</span>
-                                    <span className="text-[11px] text-gray-400 font-medium">{role === 'STAFF' ? 'Koi Staff' : 'Management'}</span>
-                                </div>
-                                <div className="h-10 w-10 bg-gradient-to-tr from-orange-500 to-red-500 rounded-full border-2 border-white shadow-md flex items-center justify-center text-white font-bold">
-                                    {role === 'BOSS' ? 'B' : (role === 'MANAGER' ? 'G' : 'S')}
-                                </div>
+                        {/* Profile Info */}
+                        <div className="flex items-center gap-4 pl-4 border-l border-gray-100">
+                            <div className="flex flex-col items-end">
+                                <p className="text-sm font-bold text-gray-900 leading-tight">{role?.replace('_', ' ') || 'Koi Officer'}</p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Koi Centre</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-[#2988FF] flex items-center justify-center text-white font-bold shadow-sm">
+                                {role?.charAt(0) || 'K'}
                             </div>
                         </div>
-                    </div>
-                </header>
+                    </header>
 
-                {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    <React.Suspense fallback={
-                        <div className="flex items-center justify-center min-h-[400px]">
-                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-orange-600"></div>
-                        </div>
-                    }>
-                        <Outlet />
-                    </React.Suspense>
-                </main>
+                    <main className="flex-1 overflow-y-auto custom-scrollbar px-12 pb-12">
+                        <React.Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2988FF]"></div></div>}>
+                            <Outlet />
+                        </React.Suspense>
+                    </main>
+                </div>
             </div>
         </div>
     );

@@ -3,7 +3,7 @@ import { BarChart3, TrendingUp, DollarSign, Package, ShoppingCart, MessageSquare
 
 const BossReports = () => {
     return (
-        <div className="p-8 bg-gray-50 min-h-screen">
+        <div className="py-6">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-end mb-10">
                     <div>
