@@ -107,7 +107,7 @@ const BossReports = () => {
                                         <p className="text-xs font-bold text-gray-400 tracking-wider text-right">{item.metric}: <span className="text-indigo-600">{item.value}%</span></p>
                                     </div>
                                     <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                                        <div 
+                                        <div
                                             className="bg-gradient-to-r from-indigo-500 to-primary-500 h-full transition-all duration-1000 ease-out"
                                             style={{ width: `${item.value}%` }}
                                         ></div>

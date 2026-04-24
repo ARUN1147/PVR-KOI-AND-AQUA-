@@ -13,7 +13,37 @@ const UserManagement = () => {
         allocatedModules: [],
         employeeId: ''
     });
+    const [selectedBranch, setSelectedBranch] = useState('All Branches');
+    const [selectedRole, setSelectedRole] = useState('All Roles');
     const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('role'));
+
+    const roleModuleMapping = {
+        'MANAGER': [
+            'Aqua:Dashboard', 'Aqua:Customers', 'Aqua:Inventory', 'Aqua:Complaints', 'Aqua:Enquiry & Orders', 'Aqua:Tasks', 'Aqua:Services', 'Aqua:Employees', 'Aqua:Invoices',
+            'Koi:Dashboard', 'Koi:Enquiries', 'Koi:Orders', 'Koi:Invoices', 'Koi:Payments', 'Koi:Inventory', 'Koi:Customers'
+        ],
+        'admin': [
+            'Aqua:Dashboard', 'Aqua:Customers', 'Aqua:Inventory', 'Aqua:Complaints', 'Aqua:Enquiry & Orders', 'Aqua:Tasks', 'Aqua:Services', 'Aqua:Employees', 'Aqua:Invoices'
+        ],
+        'KOI_MANAGER': [
+            'Koi:Dashboard', 'Koi:Enquiries', 'Koi:Orders', 'Koi:Invoices', 'Koi:Payments', 'Koi:Inventory', 'Koi:Customers'
+        ],
+        'BRANCH_MANAGER': [
+            'Aqua:Dashboard', 'Aqua:Customers', 'Aqua:Inventory', 'Koi:Dashboard', 'Koi:Inventory', 'Koi:Customers'
+        ],
+        'STAFF': [
+            'Aqua:Tasks', 'Aqua:Customers', 'Koi:Customers'
+        ]
+    };
+
+    const handleRoleChange = (newRole) => {
+        const autoModules = roleModuleMapping[newRole] || [];
+        setFormData({
+            ...formData,
+            role: newRole,
+            allocatedModules: autoModules
+        });
+    };
 
     useEffect(() => {
         fetchData();
@@ -78,16 +108,20 @@ const UserManagement = () => {
         if (!window.confirm('Are you sure you want to delete this user?')) return;
         try {
             await api.deleteUser(id);
-            fetchUsers();
+            fetchData();
         } catch (err) {
             alert('Error deleting user');
         }
     };
 
-    const filteredUsers = users.filter(user => 
-        (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
-        (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users.filter(user => {
+        const matchesSearch = (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+                             (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+        const matchesBranch = selectedBranch === 'All Branches' || user.branch === selectedBranch;
+        const matchesRole = selectedRole === 'All Roles' || user.role === selectedRole;
+        
+        return matchesSearch && matchesBranch && matchesRole;
+    });
 
     return (
         <div className="p-8 bg-gray-50 min-h-screen">
@@ -122,16 +156,25 @@ const UserManagement = () => {
                         />
                     </div>
                     <div className="flex gap-4">
-                        <select className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-medium text-gray-600 focus:ring-2 focus:ring-indigo-100">
-                            <option>All Branches</option>
-                            <option>Aqua Culture</option>
-                            <option>Koi Centre</option>
+                        <select 
+                            className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-medium text-gray-600 focus:ring-2 focus:ring-indigo-100"
+                            value={selectedBranch}
+                            onChange={(e) => setSelectedBranch(e.target.value)}
+                        >
+                            <option value="All Branches">All Branches</option>
+                            <option value="Aqua Culture">Aqua Culture</option>
+                            <option value="Koi Centre">Koi Centre</option>
                         </select>
-                        <select className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-medium text-gray-600 focus:ring-2 focus:ring-indigo-100">
-                            <option>All Roles</option>
-                            <option>Admin</option>
-                            <option>Manager</option>
-                            <option>Staff</option>
+                        <select 
+                            className="bg-gray-50 border-none rounded-xl px-4 py-3 text-sm font-medium text-gray-600 focus:ring-2 focus:ring-indigo-100"
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value)}
+                        >
+                            <option value="All Roles">All Roles</option>
+                            <option value="admin">Aqua Manager</option>
+                            <option value="KOI_MANAGER">Koi Manager</option>
+                            <option value="MANAGER">Gen. Manager</option>
+                            <option value="STAFF">Staff</option>
                         </select>
                     </div>
                 </div>
@@ -187,12 +230,17 @@ const UserManagement = () => {
                                     </td>
                                     <td className="px-8 py-5">
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => handleOpenModal(user)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                                                <Edit2 size={18} />
-                                            </button>
-                                            <button onClick={() => handleDelete(user._id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                                <Trash2 size={18} />
-                                            </button>
+                                            {/* Only show Edit/Delete for MANAGER role if current user is BOSS */}
+                                            {(user.role !== 'MANAGER' || currentUserRole === 'BOSS') && (
+                                                <>
+                                                    <button onClick={() => handleOpenModal(user)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                                        <Edit2 size={18} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(user._id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -204,8 +252,8 @@ const UserManagement = () => {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10">
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto py-10">
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-10 my-auto">
                         <h2 className="text-2xl font-bold mb-8 flex items-center gap-3">
                             <UserPlus className="text-indigo-600" />
                             {editingUser ? 'Update Officer' : 'Register New Officer'}
@@ -249,11 +297,9 @@ const UserManagement = () => {
                                     <select 
                                         className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-100"
                                         value={formData.role}
-                                        onChange={(e) => setFormData({...formData, role: e.target.value})}
+                                        onChange={(e) => handleRoleChange(e.target.value)}
                                     >
-                                        {currentUserRole === 'BOSS' && (
-                                            <option value="MANAGER">General Manager (GM)</option>
-                                        )}
+                                        {currentUserRole === 'BOSS' && <option value="MANAGER">General Manager (GM)</option>}
                                         <option value="admin">Aqua Branch Manager</option>
                                         <option value="KOI_MANAGER">Koi Branch Manager</option>
                                         <option value="BRANCH_MANAGER">Generic Branch Manager</option>
