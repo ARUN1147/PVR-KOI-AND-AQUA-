@@ -28,8 +28,8 @@ const StatCard = ({ title, value, icon: Icon, color, delay }) => (
             <Icon size={24} />
         </div>
         <div>
-            <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{title}</h3>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+            <h3 className="text-[#F97316] text-[10px] font-bold uppercase tracking-widest opacity-80">{title}</h3>
+            <p className="text-2xl font-black text-[#1a365d] mt-1 italic tracking-tight">{value}</p>
         </div>
     </motion.div>
 );
@@ -72,25 +72,25 @@ const KoiDashboard = () => {
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative bg-[#FFF7ED] rounded-2xl p-8 sm:p-12 overflow-hidden mb-8 lg:mb-12"
+                className="relative bg-[#FFF4E6] rounded-2xl p-8 sm:p-12 overflow-hidden mb-8 lg:mb-12"
             >
                 <div className="relative z-10 max-w-lg text-center sm:text-left">
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-orange-950 mb-4 leading-tight">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#F97316] mb-4 leading-tight">
                         Koi Hub <br />
-                        <span className="text-[#f97316]">Centre Operations</span>
+                        <span className="text-[#F97316]">Centre Operations</span>
                     </h1>
-                    <p className="text-orange-900/60 text-sm sm:text-base font-medium mb-6 lg:mb-8">
+                    <p className="text-[#1a365d]/60 text-sm sm:text-base font-medium mb-6 lg:mb-8 text-balance">
                         Track premium koi inventory, manage high-value sales & enquiries.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center sm:justify-start">
-                        <button className="bg-orange-600 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm font-bold shadow-lg shadow-orange-900/20 hover:opacity-90 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <button className="bg-[#1a365d] text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm font-bold shadow-lg shadow-blue-900/20 hover:opacity-90 transition-all active:scale-95 flex items-center justify-center gap-2">
                             New Sale <ArrowRight size={16} />
                         </button>
                     </div>
                 </div>
 
                 <div className="absolute right-0 top-0 w-1/2 h-full hidden lg:flex items-center justify-center opacity-20">
-                    <Fish size={240} className="text-[#f97316]" />
+                    <Fish size={240} className="text-[#F97316]" />
                 </div>
             </motion.div>
 
@@ -114,7 +114,7 @@ const KoiDashboard = () => {
                     title="Low Stock"
                     value={stats.lowStockItems}
                     icon={AlertCircle}
-                    color="bg-amber-500"
+                    color="bg-cyan-500"
                     delay={0.3}
                 />
                 <StatCard
@@ -177,7 +177,7 @@ const KoiDashboard = () => {
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Alerts</h2>
                     <div className="space-y-4">
                         {stats.lowStockItems > 0 && (
-                            <div className="p-6 bg-[#f97316] rounded-2xl text-white shadow-lg shadow-orange-900/20 relative overflow-hidden group">
+                            <div className="p-6 bg-[#F97316] rounded-2xl text-white shadow-lg shadow-orange-900/20 relative overflow-hidden group">
                                 <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
                                     <Package size={100} />
                                 </div>
@@ -188,7 +188,7 @@ const KoiDashboard = () => {
                             </div>
                         )}
 
-                        <div className="p-6 bg-orange-900 rounded-2xl text-white shadow-lg shadow-orange-900/20 relative overflow-hidden group">
+                        <div className="p-6 bg-[#1a365d] rounded-2xl text-white shadow-lg shadow-orange-900/20 relative overflow-hidden group">
                             <div className="absolute right-0 bottom-0 opacity-10 group-hover:scale-110 transition-transform">
                                 <Clock size={100} />
                             </div>
