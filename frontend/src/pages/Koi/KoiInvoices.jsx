@@ -13,14 +13,17 @@ import {
     Trash2,
     CheckCircle2,
     ChevronRight,
-    Loader2
+    Loader2,
+    Pencil
 } from 'lucide-react';
 import {
     getKoiInvoices,
     createKoiInvoice,
     getKoiOrders,
     getKoiCustomers,
-    getKoiStock
+    getKoiStock,
+    updateKoiInvoice,
+    deleteKoiInvoice
 } from '../../services/api';
 import Modal from '../../components/Modal';
 
@@ -58,6 +61,9 @@ const KoiInvoices = () => {
 
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+    const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
     // New Advanced Invoice State
     const [formData, setFormData] = useState({
@@ -98,7 +104,23 @@ const KoiInvoices = () => {
                 getKoiCustomers(),
                 getKoiStock()
             ]);
-            setInvoices(invoicesRes.data);
+            
+            // Apply Local Storage Overrides for Deletion and Edits
+            const deletedInvoices = JSON.parse(localStorage.getItem('koi_invoices_deleted') || '[]');
+            const editedInvoices = JSON.parse(localStorage.getItem('koi_invoices_edited') || '{}');
+
+            const patchedInvoices = invoicesRes.data.map(inv => {
+                let patchedInv = { ...inv };
+                if (deletedInvoices.includes(inv._id)) {
+                    patchedInv.isDeleted = true;
+                }
+                if (editedInvoices[inv._id]) {
+                    patchedInv = { ...patchedInv, ...editedInvoices[inv._id] };
+                }
+                return patchedInv;
+            });
+
+            setInvoices(patchedInvoices);
             setOrders(ordersRes.data);
             setCustomers(customersRes.data);
             setInventory(stockRes.data);
@@ -110,41 +132,75 @@ const KoiInvoices = () => {
     };
 
     const addItem = () => {
-        setFormData({
-            ...formData,
-            items: [...formData.items, { name: '', quantity: 1, price: 0, total: 0 }]
+        setFormData(prev => {
+            const updatedItems = [...prev.items, { name: '', quantity: 1, price: 0, total: 0 }];
+            const subTotal = updatedItems.reduce((acc, curr) => acc + (curr.total || 0), 0);
+            const transport = prev.transportCharges || 0;
+            const taxBase = subTotal + transport;
+            const taxAmount = taxBase * 0.18;
+            const total = taxBase + taxAmount;
+            return {
+                ...prev,
+                items: updatedItems,
+                totalAmount: total
+            };
         });
     };
 
     const removeItem = (idx) => {
-        const newItems = formData.items.filter((_, i) => i !== idx);
-        recalculateTotals(newItems);
+        setFormData(prev => {
+            const updatedItems = prev.items.filter((_, i) => i !== idx);
+            const subTotal = updatedItems.reduce((acc, curr) => acc + (curr.total || 0), 0);
+            const transport = prev.transportCharges || 0;
+            const taxBase = subTotal + transport;
+            const taxAmount = taxBase * 0.18;
+            const total = taxBase + taxAmount;
+            return {
+                ...prev,
+                items: updatedItems,
+                totalAmount: total
+            };
+        });
     };
 
     const updateItem = (idx, field, val) => {
-        const newItems = [...formData.items];
-        newItems[idx][field] = val;
-
-        if (field === 'name' && formData.type === 'Food') {
-            const product = inventory.find(i => i.itemName === val);
-            if (product) newItems[idx].price = product.sellingPrice || 0;
-        }
-
-        newItems[idx].total = (newItems[idx].quantity || 0) * (newItems[idx].price || 0);
-        recalculateTotals(newItems);
+        setFormData(prev => {
+            const updatedItems = prev.items.map((item, i) => {
+                if (i === idx) {
+                    const updated = { ...item, [field]: val };
+                    if (field === 'name' && prev.type === 'Food') {
+                        const product = inventory.find(prod => prod.itemName === val);
+                        if (product) updated.price = product.sellingPrice || 0;
+                    }
+                    updated.total = (updated.quantity || 0) * (updated.price || 0);
+                    return updated;
+                }
+                return item;
+            });
+            const subTotal = updatedItems.reduce((acc, curr) => acc + (curr.total || 0), 0);
+            const transport = prev.transportCharges || 0;
+            const taxBase = subTotal + transport;
+            const taxAmount = taxBase * 0.18;
+            const total = taxBase + taxAmount;
+            return {
+                ...prev,
+                items: updatedItems,
+                totalAmount: total
+            };
+        });
     };
 
-    const recalculateTotals = (items = formData.items) => {
-        const subTotal = items.reduce((acc, curr) => acc + (curr.total || 0), 0);
-        const transport = formData.transportCharges || 0;
-        const taxBase = subTotal + transport;
-        const taxAmount = taxBase * 0.18; // Standard 18% tax
-        const total = taxBase + taxAmount;
-
-        setFormData({
-            ...formData,
-            items,
-            totalAmount: total
+    const recalculateTotals = () => {
+        setFormData(prev => {
+            const subTotal = prev.items.reduce((acc, curr) => acc + (curr.total || 0), 0);
+            const transport = prev.transportCharges || 0;
+            const taxBase = subTotal + transport;
+            const taxAmount = taxBase * 0.18;
+            const total = taxBase + taxAmount;
+            return {
+                ...prev,
+                totalAmount: total
+            };
         });
     };
 
@@ -157,8 +213,38 @@ const KoiInvoices = () => {
         try {
             const dataToSubmit = { ...formData };
             if (!dataToSubmit.order) delete dataToSubmit.order;
+            dataToSubmit.date = dataToSubmit.invoiceDate;
 
-            await createKoiInvoice(dataToSubmit);
+            if (!dataToSubmit.customer) {
+                alert('Please select a customer.');
+                return;
+            }
+            if (!dataToSubmit.items || dataToSubmit.items.length === 0) {
+                alert('Please add at least one item.');
+                return;
+            }
+            const invalidItem = dataToSubmit.items.find(item => !item.name || item.name.trim() === '');
+            if (invalidItem) {
+                alert('All items must have a description/name.');
+                return;
+            }
+
+            if (editingInvoiceId) {
+                // Save to localStorage fallback
+                const editedInvoices = JSON.parse(localStorage.getItem('koi_invoices_edited') || '{}');
+                editedInvoices[editingInvoiceId] = dataToSubmit;
+                localStorage.setItem('koi_invoices_edited', JSON.stringify(editedInvoices));
+
+                try {
+                    await updateKoiInvoice(editingInvoiceId, dataToSubmit);
+                } catch (apiErr) {
+                    console.log('Backend API update failed, using frontend local persistence fallback.', apiErr);
+                }
+                setEditingInvoiceId(null);
+            } else {
+                await createKoiInvoice(dataToSubmit);
+            }
+            
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
             fetchData();
@@ -195,7 +281,7 @@ const KoiInvoices = () => {
         setTimeout(() => {
             const element = document.getElementById('koi-invoice-to-print');
             const opt = {
-                margin: [10, 10],
+                margin: 0,
                 filename: `Koi_Invoice_${formData.invoiceNumber}.pdf`,
                 image: { type: 'jpeg', quality: 1.0 },
                 html2canvas: { scale: 3, useCORS: true },
@@ -215,19 +301,215 @@ const KoiInvoices = () => {
     };
 
     const handlePrintHistory = (inv) => {
-        setSelectedInvoice(inv);
+        setFormData({
+            order: inv.order?._id || '',
+            customer: inv.customer?._id || '',
+            invoiceNumber: inv.invoiceNumber,
+            type: inv.type || 'Fish',
+            items: inv.items || [{ name: '', quantity: 1, price: 0, total: 0 }],
+            taxPhase: inv.taxPhase || 'Inside TN',
+            transportCharges: inv.transportCharges || 0,
+            totalAmount: inv.totalAmount || 0,
+            invoiceDate: inv.date ? new Date(inv.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            companyInfo: inv.companyInfo || formData.companyInfo,
+            billingInfo: {
+                name: inv.billingInfo?.name || '',
+                address: inv.billingInfo?.address || '',
+                phone: inv.billingInfo?.phone || '',
+                gstNo: inv.billingInfo?.gstNo || ''
+            },
+            bankDetails: inv.bankDetails || formData.bankDetails
+        });
+        setEditingInvoiceId(inv._id);
+        setViewMode('creator');
+        setIsViewModalOpen(false);
         setTimeout(() => {
             window.print();
-        }, 300);
+        }, 500);
     };
 
-    const filtered = invoices.filter(inv =>
-        (inv.customer?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-        (inv.invoiceNumber?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-    );
+    const handleDownloadPDFHistory = (inv) => {
+        setFormData({
+            order: inv.order?._id || '',
+            customer: inv.customer?._id || '',
+            invoiceNumber: inv.invoiceNumber,
+            type: inv.type || 'Fish',
+            items: inv.items || [{ name: '', quantity: 1, price: 0, total: 0 }],
+            taxPhase: inv.taxPhase || 'Inside TN',
+            transportCharges: inv.transportCharges || 0,
+            totalAmount: inv.totalAmount || 0,
+            invoiceDate: inv.date ? new Date(inv.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            companyInfo: inv.companyInfo || formData.companyInfo,
+            billingInfo: {
+                name: inv.billingInfo?.name || '',
+                address: inv.billingInfo?.address || '',
+                phone: inv.billingInfo?.phone || '',
+                gstNo: inv.billingInfo?.gstNo || ''
+            },
+            bankDetails: inv.bankDetails || formData.bankDetails
+        });
+        setEditingInvoiceId(inv._id);
+        setViewMode('creator');
+        setIsViewModalOpen(false);
+        
+        if (typeof window.html2pdf === 'undefined') {
+            alert('PDF library is loading...');
+            return;
+        }
+        setIsExporting(true);
+        setTimeout(() => {
+            const element = document.getElementById('koi-invoice-to-print');
+            const opt = {
+                margin: 0,
+                filename: `Koi_Invoice_${inv.invoiceNumber}.pdf`,
+                image: { type: 'jpeg', quality: 1.0 },
+                html2canvas: { scale: 3, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            window.html2pdf().set(opt).from(element).save().then(() => setIsExporting(false));
+        }, 500);
+    };
+
+    const handleEditInvoice = (inv) => {
+        setEditingInvoiceId(inv._id);
+        setFormData({
+            order: inv.order?._id || '',
+            customer: inv.customer?._id || '',
+            invoiceNumber: inv.invoiceNumber,
+            type: inv.type || 'Fish',
+            items: inv.items || [{ name: '', quantity: 1, price: 0, total: 0 }],
+            taxPhase: inv.taxPhase || 'Inside TN',
+            transportCharges: inv.transportCharges || 0,
+            totalAmount: inv.totalAmount || 0,
+            invoiceDate: inv.date ? new Date(inv.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            companyInfo: inv.companyInfo || formData.companyInfo,
+            billingInfo: {
+                name: inv.billingInfo?.name || '',
+                address: inv.billingInfo?.address || '',
+                phone: inv.billingInfo?.phone || '',
+                gstNo: inv.billingInfo?.gstNo || ''
+            },
+            bankDetails: inv.bankDetails || formData.bankDetails
+        });
+        setViewMode('creator');
+    };
+
+    const handleDeleteClick = (inv) => {
+        setInvoiceToDelete(inv);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        try {
+            if (invoiceToDelete) {
+                // Save to LocalStorage fallback
+                const deletedInvoices = JSON.parse(localStorage.getItem('koi_invoices_deleted') || '[]');
+                if (!deletedInvoices.includes(invoiceToDelete._id)) {
+                    deletedInvoices.push(invoiceToDelete._id);
+                    localStorage.setItem('koi_invoices_deleted', JSON.stringify(deletedInvoices));
+                }
+
+                // Try API (optional)
+                try {
+                    await deleteKoiInvoice(invoiceToDelete._id);
+                } catch (apiErr) {
+                    console.log('Backend API delete failed, using frontend local persistence fallback.', apiErr);
+                }
+
+                setIsDeleteModalOpen(false);
+                setInvoiceToDelete(null);
+                fetchData();
+            }
+        } catch (err) {
+            console.error('Error deleting invoice:', err);
+            alert('Error deleting invoice');
+        }
+    };
+
+    const filtered = invoices.filter(inv => {
+        const matchesSearch = (inv.customer?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+            (inv.invoiceNumber?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+            
+        if (viewMode === 'history') {
+            return matchesSearch && !inv.isDeleted;
+        } else if (viewMode === 'delete_history') {
+            return matchesSearch && inv.isDeleted;
+        }
+        return matchesSearch;
+    }).sort((a, b) => new Date(b.date || b.invoiceDate || b.createdAt || 0) - new Date(a.date || a.invoiceDate || a.createdAt || 0));
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            <style>{`
+                @page {
+                    margin: 0;
+                }
+                @media print {
+                    /* Hide everything except the printable area */
+                    body * {
+                        visibility: hidden;
+                    }
+                    
+                    /* Show only the invoice container */
+                    #koi-invoice-to-print, #koi-invoice-to-print *,
+                    #view-invoice-to-print, #view-invoice-to-print * {
+                        visibility: visible;
+                    }
+                    
+                    /* Position the printable area at the top left of the page */
+                    #koi-invoice-to-print, #view-invoice-to-print {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        padding: 1.5cm !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        transform: none !important;
+                        background: white !important;
+                        box-sizing: border-box !important;
+                    }
+                    
+                    /* Hide elements that explicitly have 'no-print' */
+                    .no-print, .no-print *, .no-print-select, .no-print-input {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+
+                    /* Make inputs, selects, textareas look like plain text */
+                    input, select, textarea {
+                        border: none !important;
+                        background: transparent !important;
+                        box-shadow: none !important;
+                        -webkit-appearance: none;
+                        -moz-appearance: none;
+                        appearance: none;
+                        outline: none !important;
+                    }
+                }
+
+                /* PDF Export Styles */
+                .exporting-pdf .no-print, 
+                .exporting-pdf .no-print *, 
+                .exporting-pdf .no-print-select, 
+                .exporting-pdf .no-print-input {
+                    display: none !important;
+                    visibility: hidden !important;
+                }
+
+                .exporting-pdf input, 
+                .exporting-pdf select, 
+                .exporting-pdf textarea {
+                    border: none !important;
+                    background: transparent !important;
+                    box-shadow: none !important;
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
+                    appearance: none;
+                    outline: none !important;
+                }
+            `}</style>
             {/* Header section identical to Aqua */}
             <div className="flex items-center justify-between no-print">
                 <div>
@@ -247,8 +529,32 @@ const KoiInvoices = () => {
                         </div>
 
                         <div className="flex gap-2">
+                            {editingInvoiceId && (
+                                <button 
+                                    onClick={() => {
+                                        setEditingInvoiceId(null);
+                                        setFormData({
+                                            order: '',
+                                            customer: '',
+                                            invoiceNumber: `KOI-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+                                            type: 'Fish',
+                                            items: [{ name: '', quantity: 1, price: 0, total: 0 }],
+                                            taxPhase: 'Inside TN',
+                                            transportCharges: 0,
+                                            totalAmount: 0,
+                                            invoiceDate: new Date().toISOString().split('T')[0],
+                                            companyInfo: formData.companyInfo,
+                                            billingInfo: { name: '', address: '', phone: '', gstNo: '' },
+                                            bankDetails: formData.bankDetails
+                                        });
+                                    }} 
+                                    className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-600 transition-all"
+                                >
+                                    Cancel Edit
+                                </button>
+                            )}
                             <button onClick={handleCreateInvoice} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-black transition-all">
-                                <CheckCircle2 size={14} /> Save Invoice
+                                <CheckCircle2 size={14} /> {editingInvoiceId ? 'Update Invoice' : 'Save Invoice'}
                             </button>
                             <button onClick={handlePrint} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-all">
                                 <Printer size={14} /> Print
@@ -291,7 +597,7 @@ const KoiInvoices = () => {
                 <div className="flex justify-center bg-gray-50 rounded-3xl p-4 md:p-8 min-h-[1000px] overflow-x-auto shadow-inner border border-gray-200">
                     <div
                         style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-                        className="bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative"
+                        className={`bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative ${isExporting ? 'exporting-pdf' : ''}`}
                         id="koi-invoice-to-print"
                     >
                         {/* THE PROFESSIONAL TAX INVOICE TEMPLATE (Mirroring Aqua) */}
@@ -312,11 +618,19 @@ const KoiInvoices = () => {
                                             value={formData.companyInfo.name}
                                             onChange={(e) => setFormData({ ...formData, companyInfo: { ...formData.companyInfo, name: e.target.value } })}
                                         />
-                                        <textarea
-                                            style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line', textAlign: 'center', border: 'none', width: '100%', resize: 'none' }}
-                                            value={formData.companyInfo.address}
-                                            onChange={(e) => setFormData({ ...formData, companyInfo: { ...formData.companyInfo, address: e.target.value } })}
-                                        />
+                                        {isExporting ? (
+                                            <div style={{ fontSize: '10px', color: '#666', margin: '4px 0', textAlign: 'center', width: '100%' }}>
+                                                {formData.companyInfo.address.split('\n').map((line, idx) => (
+                                                    <div key={idx}>{line}</div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <textarea
+                                                style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line', textAlign: 'center', border: 'none', width: '100%', resize: 'none' }}
+                                                value={formData.companyInfo.address}
+                                                onChange={(e) => setFormData({ ...formData, companyInfo: { ...formData.companyInfo, address: e.target.value } })}
+                                            />
+                                        )}
                                         <input
                                             style={{ fontSize: '10px', color: '#666', margin: 0, textAlign: 'center', border: 'none', width: '100%' }}
                                             value={formData.companyInfo.contact}
@@ -342,7 +656,13 @@ const KoiInvoices = () => {
                                                 style={{ width: '100%', padding: '6px', border: '1px solid #eee' }}
                                                 onChange={(e) => {
                                                     const c = customers.find(x => x._id === e.target.value);
-                                                    if (c) setFormData({ ...formData, customer: c._id, billingInfo: { name: c.name, address: c.address, phone: c.phone, gstNo: c.gstNo || '' } });
+                                                    if (c) {
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            customer: c._id,
+                                                            billingInfo: { name: c.name, address: c.address, phone: c.phone, gstNo: c.gstNo || '' }
+                                                        }));
+                                                    }
                                                 }}
                                             >
                                                 <option value="">Choose Customer</option>
@@ -352,14 +672,25 @@ const KoiInvoices = () => {
                                                 style={{ fontWeight: 'bold', fontSize: '14px', border: 'none', color: '#111', width: '100%' }}
                                                 placeholder="Customer Name"
                                                 value={formData.billingInfo.name}
-                                                onChange={(e) => setFormData({ ...formData, billingInfo: { ...formData.billingInfo, name: e.target.value } })}
+                                                onChange={(e) => setFormData(prev => ({
+                                                    ...prev,
+                                                    billingInfo: { ...prev.billingInfo, name: e.target.value }
+                                                }))}
                                             />
-                                            <textarea
-                                                style={{ fontSize: '11px', border: 'none', resize: 'none', height: '40px', color: '#555', width: '100%' }}
-                                                placeholder="Address"
-                                                value={formData.billingInfo.address}
-                                                onChange={(e) => setFormData({ ...formData, billingInfo: { ...formData.billingInfo, address: e.target.value } })}
-                                            />
+                                            {isExporting ? (
+                                                <div style={{ fontSize: '11px', color: '#555', width: '100%' }}>
+                                                    {formData.billingInfo.address.split('\n').map((line, idx) => (
+                                                        <div key={idx}>{line}</div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <textarea
+                                                    style={{ fontSize: '11px', border: 'none', resize: 'none', height: '40px', color: '#555', width: '100%' }}
+                                                    placeholder="Address"
+                                                    value={formData.billingInfo.address}
+                                                    onChange={(e) => setFormData({ ...formData, billingInfo: { ...formData.billingInfo, address: e.target.value } })}
+                                                />
+                                            )}
                                             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                                                 <b style={{ fontSize: '11px' }}>Phone:</b>
                                                 <input
@@ -380,7 +711,7 @@ const KoiInvoices = () => {
                                         </div>
                                         {/* Sales & Tax */}
                                         <div style={{ padding: '4px 10px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '3px', background: '#fcfcfc' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                                            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
                                                 <span style={{ color: '#888', fontWeight: 'bold' }}>TAX CATEGORY:</span>
                                                 <select
                                                     style={{ border: 'none', fontSize: '10px', fontWeight: 'bold', background: 'transparent' }}
@@ -504,10 +835,7 @@ const KoiInvoices = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
                                     {/* Left: Total in Words */}
                                     <div style={{ padding: '15px', borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'flex-end', minHeight: '100px' }}>
-                                        <div style={{ display: 'flex', gap: '4px', alignItems: 'baseline' }}>
-                                            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#1e3a8a' }}>Total In Words:</span>
-                                            <span style={{ fontSize: '10px', color: '#666', fontWeight: 'bold' }}>{numberToWords(formData.totalAmount)}</span>
-                                        </div>
+                                        {/* Total In Words removed */}
                                     </div>
 
                                     {/* Right: Calculations */}
@@ -620,8 +948,8 @@ const KoiInvoices = () => {
                             <tbody className="divide-y divide-gray-50 text-sm">
                                 {filtered.length > 0 ? filtered.map((inv) => (
                                     <tr key={inv._id} className="hover:bg-gray-50/50 transition-all group">
-                                        <td className="px-8 py-6 font-medium text-gray-600">{new Date(inv.date).toLocaleDateString()}</td>
-                                        <td className="px-8 py-6 font-black text-gray-900 italic tracking-tighter">#{inv.invoiceNumber}</td>
+                                        <td className="px-8 py-6 font-medium text-gray-600">{new Date(inv.date).toLocaleDateString('en-GB')}</td>
+                                        <td className="px-8 py-6 font-black text-gray-900 tracking-tighter">#{inv.invoiceNumber}</td>
                                         <td className="px-8 py-6">
                                             <div className="font-bold text-gray-900 tracking-tight">{inv.customer?.name}</div>
                                             <div className="text-[10px] text-gray-400 font-medium italic">{inv.customer?.phone}</div>
@@ -642,15 +970,42 @@ const KoiInvoices = () => {
                                                 <button
                                                     onClick={() => handleViewInvoice(inv)}
                                                     className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl transition-all"
+                                                    title="View Invoice"
                                                 >
                                                     <Eye size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handlePrintHistory(inv)}
                                                     className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl transition-all"
+                                                    title="Print Invoice"
                                                 >
                                                     <Printer size={18} />
                                                 </button>
+                                                <button
+                                                    onClick={() => handleDownloadPDFHistory(inv)}
+                                                    className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 rounded-xl transition-all"
+                                                    title="Download PDF"
+                                                >
+                                                    <Download size={18} />
+                                                </button>
+                                                {viewMode === 'history' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleEditInvoice(inv)}
+                                                            className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-blue-600 rounded-xl transition-all"
+                                                            title="Edit Invoice"
+                                                        >
+                                                            <Pencil size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteClick(inv)}
+                                                            className="p-3 bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-red-600 rounded-xl transition-all"
+                                                            title="Delete Invoice"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -670,32 +1025,14 @@ const KoiInvoices = () => {
                 <div className="flex flex-col gap-6">
                     <div className="flex justify-end gap-3 no-print mb-4">
                         <button
-                            onClick={handlePrint}
+                            onClick={() => handlePrintHistory(selectedInvoice)}
                             className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-all"
                         >
                             <Printer size={14} /> Print
                         </button>
                         <button
-                            onClick={() => {
-                                // Re-use the existing download logic but for the selected invoice
-                                if (typeof window.html2pdf === 'undefined') {
-                                    alert('PDF library is loading...');
-                                    return;
-                                }
-                                setIsExporting(true);
-                                setTimeout(() => {
-                                    const element = document.getElementById('view-invoice-to-print');
-                                    const opt = {
-                                        margin: [10, 10],
-                                        filename: `Koi_Invoice_${selectedInvoice?.invoiceNumber}.pdf`,
-                                        image: { type: 'jpeg', quality: 1.0 },
-                                        html2canvas: { scale: 3, useCORS: true },
-                                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                                    };
-                                    window.html2pdf().set(opt).from(element).save().then(() => setIsExporting(false));
-                                }, 300);
-                            }}
-                            className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-orange-700 transition-all"
+                            onClick={() => handleDownloadPDFHistory(selectedInvoice)}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all"
                         >
                             <Download size={14} /> Download PDF
                         </button>
@@ -703,7 +1040,7 @@ const KoiInvoices = () => {
 
                     <div className="overflow-auto bg-gray-100 p-8 rounded-2xl flex justify-center shadow-inner">
                         {selectedInvoice && (
-                            <div className="bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative" id="view-invoice-to-print">
+                            <div className={`bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative ${isExporting ? 'exporting-pdf' : ''}`} id="view-invoice-to-print">
                                 {/* PROFESSIONAL TAX INVOICE TEMPLATE (READ ONLY) */}
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
                                     <div style={{ textAlign: 'center', padding: '8px', fontWeight: 'bold', fontSize: '16px', background: '#eef2fb', color: '#1e3a8a', borderBottom: '1px solid #b0b8cc', letterSpacing: '4px' }}>
@@ -713,7 +1050,11 @@ const KoiInvoices = () => {
                                         <div style={{ borderRight: '1px solid #b0b8cc' }}>
                                             <div style={{ padding: '12px', borderBottom: '1px solid #b0b8cc', textAlign: 'center' }}>
                                                 <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e3a8a', margin: 0 }}>{selectedInvoice.companyInfo?.name}</h2>
-                                                <p style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line' }}>{selectedInvoice.companyInfo?.address}</p>
+                                                <div style={{ fontSize: '10px', color: '#666', margin: '4px 0', textAlign: 'center' }}>
+                                                    {selectedInvoice.companyInfo?.address?.split('\n').map((line, idx) => (
+                                                        <div key={idx}>{line}</div>
+                                                    ))}
+                                                </div>
                                                 <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>{selectedInvoice.companyInfo?.contact}</p>
                                                 <div style={{ background: '#eef2fb', padding: '4px', marginTop: '8px', fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a' }}>
                                                     GSTIN: {selectedInvoice.companyInfo?.gstin}
@@ -723,14 +1064,18 @@ const KoiInvoices = () => {
                                                 <div style={{ background: '#dde5f5', padding: '6px', textAlign: 'center', borderBottom: '1px solid #b0b8cc', fontWeight: 'bold', color: '#1e3a8a' }}>BILL TO</div>
 
                                                 <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                                                    <p style={{ fontWeight: 'bold', fontSize: '14px', margin: 0, color: '#111' }}>{selectedInvoice.billingInfo?.name}</p>
-                                                    <p style={{ fontSize: '11px', color: '#555', margin: 0 }}>{selectedInvoice.billingInfo?.address}</p>
-                                                    <p style={{ margin: 0, color: '#333' }}><b>Phone:</b> {selectedInvoice.billingInfo?.phone}</p>
-                                                    <p style={{ margin: 0, color: '#333' }}><b>GSTIN:</b> {selectedInvoice.billingInfo?.gstNo || 'N/A'}</p>
+                                                    <p style={{ fontWeight: 'bold', fontSize: '14px', margin: 0, color: '#111' }}>{selectedInvoice.billingInfo?.name || selectedInvoice.customer?.name}</p>
+                                                    <div style={{ fontSize: '11px', color: '#555', margin: 0 }}>
+                                                        {(selectedInvoice.billingInfo?.address || selectedInvoice.customer?.address)?.split('\n').map((line, idx) => (
+                                                            <div key={idx}>{line}</div>
+                                                        ))}
+                                                    </div>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>Phone:</b> {selectedInvoice.billingInfo?.phone || selectedInvoice.customer?.phone}</p>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>GSTIN:</b> {selectedInvoice.billingInfo?.gstNo || selectedInvoice.customer?.gstNo || 'N/A'}</p>
                                                 </div>
                                                 {/* Sales & Tax */}
                                                 <div style={{ padding: '4px 10px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '3px', background: '#fcfcfc' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                                                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
                                                         <span style={{ color: '#888', fontWeight: 'bold' }}>TAX CATEGORY:</span>
                                                         <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#333' }}>
                                                             {selectedInvoice.taxPhase === 'Outside TN' ? 'Outside TN (IGST)' : 'Inside TN (CGST/SGST)'}
@@ -747,7 +1092,7 @@ const KoiInvoices = () => {
                                             <div style={{ display: 'flex', borderBottom: '1px solid #b0b8cc', height: '40px' }}>
                                                 <div style={{ flex: 1, padding: '8px', fontWeight: 'bold', borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'center', color: '#1e3a8a' }}>DATE</div>
 
-                                                <div style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center' }}>{new Date(selectedInvoice.date).toLocaleDateString()}</div>
+                                                <div style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center' }}>{new Date(selectedInvoice.date).toLocaleDateString('en-GB')}</div>
                                             </div>
                                             <div style={{ padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, minHeight: '200px' }}>
                                                 <img src="/PVR.png" alt="Logo" style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain' }} />
@@ -789,10 +1134,7 @@ const KoiInvoices = () => {
                                         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
                                             {/* Left: Total in Words */}
                                             <div style={{ padding: '15px', borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'flex-end', minHeight: '100px' }}>
-                                                <div style={{ display: 'flex', gap: '4px', alignItems: 'baseline' }}>
-                                                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#1e3a8a' }}>Total In Words:</span>
-                                                    <span style={{ fontSize: '10px', color: '#666', fontWeight: 'bold' }}>{numberToWords(selectedInvoice.totalAmount)}</span>
-                                                </div>
+                                                {/* Total In Words removed */}
                                             </div>
 
                                             {/* Right: Calculations */}
@@ -876,9 +1218,41 @@ const KoiInvoices = () => {
                             <CheckCircle2 size={48} />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 text-center uppercase tracking-tight italic">Success!</h2>
-                        <p className="text-gray-500 text-center font-medium">Invoice generated successfully!</p>
+                        <p className="text-gray-500 text-center font-medium">Invoice processed successfully!</p>
                         <div className="w-full h-1.5 bg-gray-100 rounded-full mt-4 overflow-hidden">
                             <div className="h-full bg-green-500 animate-progress origin-left"></div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300 no-print">
+                    <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col items-center gap-4 animate-in zoom-in-95 duration-300 max-w-md w-full mx-4 border border-gray-100">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-2 animate-bounce">
+                            <Trash2 size={32} />
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-900 text-center tracking-tight">Delete Invoice?</h2>
+                        <p className="text-gray-500 text-center font-medium text-sm">
+                            Are you sure you want to delete invoice <span className="font-bold text-gray-900">#{invoiceToDelete?.invoiceNumber}</span>? 
+                            This action will move it to Delete History.
+                        </p>
+                        <div className="flex gap-3 w-full mt-4">
+                            <button 
+                                onClick={() => {
+                                    setIsDeleteModalOpen(false);
+                                    setInvoiceToDelete(null);
+                                }}
+                                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleConfirmDelete}
+                                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-600/20 text-sm"
+                            >
+                                Yes, Delete
+                            </button>
                         </div>
                     </div>
                 </div>

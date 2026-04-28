@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus,
@@ -18,7 +19,8 @@ import {
     CreditCard,
     Filter,
     Calendar,
-    Loader2
+    Loader2,
+    Eye
 } from 'lucide-react';
 import {
     getKoiCustomers,
@@ -60,10 +62,19 @@ const KoiCustomers = () => {
         phone: '',
         address: ''
     });
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [customerToDelete, setCustomerToDelete] = useState(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewingCustomer, setViewingCustomer] = useState(null);
+
+    const location = useLocation();
 
     useEffect(() => {
         fetchCustomers();
-    }, []);
+        if (location.state?.openRegisterModal) {
+            setIsModalOpen(true);
+        }
+    }, [location.state]);
 
     const fetchCustomers = async () => {
         try {
@@ -120,15 +131,35 @@ const KoiCustomers = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteClick = async (id, e) => {
+    const handleDeleteClick = (customer, e) => {
         if (e) e.stopPropagation();
-        if (window.confirm('Are you sure you want to delete this customer record?')) {
+        setCustomerToDelete(customer);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        try {
+            await deleteKoiCustomer(customerToDelete._id);
+            fetchCustomers();
+            setIsDeleteModalOpen(false);
+            setCustomerToDelete(null);
+        } catch (err) {
+            console.error('Error deleting customer:', err);
+            alert('Error deleting customer');
+        }
+    };
+
+    const handleViewClick = async (customer, e) => {
+        if (e) e.stopPropagation();
+        setViewingCustomer(customer);
+        setIsViewModalOpen(true);
+        
+        if (!customerDetails[customer._id]) {
             try {
-                await deleteKoiCustomer(id);
-                fetchCustomers();
+                const res = await getKoiCustomerById(customer._id);
+                setCustomerDetails(prev => ({ ...prev, [customer._id]: res.data }));
             } catch (err) {
-                console.error('Error deleting customer:', err);
-                alert('Error deleting customer');
+                console.error('Error fetching customer details:', err);
             }
         }
     };
@@ -147,44 +178,73 @@ const KoiCustomers = () => {
 
     return (
         <div className="py-6 space-y-8 lg:space-y-12">
-            {/* Banner Section */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative bg-[#FFF7ED] rounded-2xl lg:rounded-[3rem] p-8 lg:p-12 overflow-hidden shadow-sm"
-            >
-                <div className="relative z-10 max-w-2xl">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-[#f97316] text-[10px] font-black uppercase tracking-widest mb-6 border border-orange-500/20">
-                        <Fish size={12} />
-                        Premium Koi Clientele
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Client Directory</h1>
+                    <p className="text-gray-500 mt-1 text-sm sm:text-base">Manage high-value koi enthusiasts and profile records.</p>
+                </div>
+            </div>
+
+            {/* Top Stats Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard
+                    title="Client Database"
+                    value={customers.length.toString().padStart(2, '0')}
+                    icon={Users}
+                    color="bg-orange-500"
+                    delay={0.1}
+                />
+                <div className="bg-[#FFF4E6] rounded-[2rem] p-8 text-gray-900 relative overflow-hidden group shadow-md border border-orange-100">
+                    <div className="absolute right-[-20%] bottom-[-10%] text-orange-200/40 group-hover:scale-110 transition-transform duration-700">
+                        <Fish size={180} />
                     </div>
-                    <h1 className="text-3xl lg:text-5xl font-bold text-orange-950 mb-4 leading-tight">
-                        Client <br />
-                        <span className="text-[#f97316]">Directory</span>
-                    </h1>
-                    <p className="text-orange-900/60 text-sm lg:text-base font-medium mb-8 max-w-md">
-                        Manage high-value koi enthusiasts, track premium purchase cycles and exclusive collection histories.
-                    </p>
-                    <div className="flex flex-wrap gap-4">
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="bg-[#f97316] text-white px-8 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-900/20 hover:bg-[#f97316]/90 transition-all active:scale-95 flex items-center gap-2"
-                        >
-                            <Plus size={18} />
-                            Register Client
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-600 mb-2">Portfolio Value</h4>
+                    <p className="text-3xl font-bold mb-4 text-orange-950">Premium <span className="text-xs font-medium text-orange-700/70 block mt-1">Tier-1 Enthusiasts</span></p>
+                    <div className="h-1 bg-orange-200/50 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: '85%' }}
+                            transition={{ duration: 1.5, delay: 0.5 }}
+                            className="h-full bg-orange-500"
+                        />
+                    </div>
+                    <p className="text-[10px] font-bold text-orange-700/60 mt-3 uppercase tracking-widest">Confidence: 85%</p>
+                </div>
+
+                <div className="bg-white rounded-[2rem] p-6 border border-gray-50 shadow-sm">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Engagement</h4>
+                    <div className="space-y-3">
+                        <button className="w-full flex items-center justify-between p-4 bg-orange-50/50 hover:bg-orange-100 rounded-2xl transition-all group">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-orange-600 shadow-sm">
+                                    <CreditCard size={14} />
+                                </div>
+                                <span className="text-[10px] font-bold uppercase tracking-tight text-gray-600">Ledger Report</span>
+                            </div>
+                            <ArrowRight size={14} className="text-gray-300 group-hover:text-orange-600 -translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
                         </button>
                     </div>
                 </div>
+            </div>
 
-                <div className="absolute right-[-20px] top-[-20px] w-1/2 h-full hidden lg:flex items-center justify-center opacity-10">
-                    <Fish size={320} className="text-[#f97316]" />
-                </div>
+            {/* Action Section */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex justify-end"
+            >
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-[#f97316] text-white px-8 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-[#f97316]/90 transition-all active:scale-95 flex items-center gap-2"
+                >
+                    <Plus size={18} />
+                    Register Client
+                </button>
             </motion.div>
 
             {/* Stats & Search Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-3 flex flex-col gap-6">
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                         <div className="relative w-full md:w-2/3 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#f97316] transition-colors" size={18} />
                             <input
@@ -212,7 +272,7 @@ const KoiCustomers = () => {
                         {loading ? (
                             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border border-gray-50 shadow-sm">
                                 <Loader2 className="animate-spin text-[#f97316] mb-4" size={40} />
-                                <p className="text-gray-400 font-bold text-sm uppercase tracking-widest italic">Loading portfolio records...</p>
+                                <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">Loading portfolio records...</p>
                             </div>
                         ) : (
                             <AnimatePresence>
@@ -239,7 +299,7 @@ const KoiCustomers = () => {
                                                     {customer.name[0].toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-base font-bold text-gray-900 tracking-tight group-hover:text-[#f97316] transition-colors uppercase italic font-black">
+                                                    <h3 className="text-base font-bold text-gray-900 tracking-tight group-hover:text-[#f97316] transition-colors uppercase font-black">
                                                         {customer.name}
                                                     </h3>
                                                     <div className="flex flex-wrap items-center gap-4 mt-1">
@@ -247,18 +307,33 @@ const KoiCustomers = () => {
                                                             <Phone size={12} className="text-orange-500" />
                                                             {customer.phone}
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-black text-orange-600 uppercase tracking-widest italic bg-orange-50 px-2 py-0.5 rounded-full">
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded-full">
                                                             {customer.purchaseFrequency || 0} Purchase Cycles
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={(e) => handleViewClick(customer, e)}
+                                                    className="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-xl hover:bg-[#f97316] hover:text-white transition-all shadow-sm"
+                                                    title="View Profile"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
                                                 <button
                                                     onClick={(e) => handleEditClick(customer, e)}
-                                                    className="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-xl hover:bg-orange-600 hover:text-white transition-all shadow-sm"
+                                                    className="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-xl hover:bg-[#f97316] hover:text-white transition-all shadow-sm"
+                                                    title="Edit Profile"
                                                 >
                                                     <Edit3 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDeleteClick(customer, e)}
+                                                    className="w-10 h-10 flex items-center justify-center bg-gray-50 text-gray-400 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                                    title="Delete Profile"
+                                                >
+                                                    <Trash2 size={16} />
                                                 </button>
                                                 <div className={`p-2 rounded-xl transition-all duration-300 ${expandedId === customer._id ? 'bg-orange-50 text-orange-600 rotate-180' : 'text-gray-300 group-hover:text-orange-200'}`}>
                                                     <ChevronDown size={20} />
@@ -284,7 +359,7 @@ const KoiCustomers = () => {
                                                                     </div>
                                                                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Client Residence</span>
                                                                 </div>
-                                                                <p className="text-sm font-medium text-gray-700 leading-relaxed italic uppercase">
+                                                                <p className="text-sm font-medium text-gray-700 leading-relaxed uppercase">
                                                                     {customer.address || "No address provided"}
                                                                 </p>
                                                                 <button className="flex items-center gap-2 text-[10px] font-black text-orange-600 uppercase tracking-widest hover:underline pt-2">
@@ -293,20 +368,30 @@ const KoiCustomers = () => {
                                                             </div>
 
                                                             <div className="space-y-4">
-                                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                                                    <ShoppingBag size={14} className="text-orange-500" /> Collection History
+                                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-between gap-2 w-full">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <ShoppingBag size={14} className="text-orange-500" /> Collection History
+                                                                    </div>
+                                                                    {customerDetails[customer._id]?.orderHistory?.length > 0 && (
+                                                                        <span className="text-[#f97316] font-black text-xs bg-orange-50 px-2.5 py-1 rounded-lg shadow-sm">
+                                                                            Total: ₹{customerDetails[customer._id].orderHistory.reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0).toLocaleString('en-IN')}
+                                                                        </span>
+                                                                    )}
                                                                 </h4>
                                                                 <div className="space-y-2">
                                                                     {customerDetails[customer._id]?.orderHistory?.length > 0 ? (
                                                                         customerDetails[customer._id].orderHistory.slice(0, 3).map((order, idx) => (
                                                                             <div key={idx} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:border-orange-200 transition-all shadow-sm">
-                                                                                <div>
-                                                                                    <span className="block text-[11px] font-black text-gray-900 uppercase">#{order._id?.slice(-6).toUpperCase()}</span>
-                                                                                    <span className="text-[10px] text-gray-400 font-bold uppercase">{order.fishType || 'Unknown Variety'}</span>
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className="text-xs font-bold text-orange-600">{idx + 1}.</span>
+                                                                                    <div>
+                                                                                        <span className="block text-[11px] font-black text-gray-900 uppercase">#{order._id?.slice(-6).toUpperCase()}</span>
+                                                                                        <span className="text-[10px] text-gray-400 font-bold uppercase">{order.fishType || 'Unknown Variety'}</span>
+                                                                                    </div>
                                                                                 </div>
                                                                                 <div className="text-right">
                                                                                     <div className="text-xs font-black text-gray-900">₹{order.totalAmount}</div>
-                                                                                    <div className="text-[9px] font-bold text-emerald-500 uppercase italic">{new Date(order.createdAt).toLocaleDateString()}</div>
+                                                                                    <div className="text-[9px] font-bold text-emerald-500 uppercase">{new Date(order.createdAt).toLocaleDateString('en-GB')}</div>
                                                                                 </div>
                                                                             </div>
                                                                         ))
@@ -316,12 +401,15 @@ const KoiCustomers = () => {
                                                                 </div>
                                                                 <div className="flex gap-2">
                                                                     <button
-                                                                        onClick={(e) => handleDeleteClick(customer._id, e)}
+                                                                        onClick={(e) => handleDeleteClick(customer, e)}
                                                                         className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-50 text-red-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all"
                                                                     >
                                                                         <Trash2 size={14} /> Archive
                                                                     </button>
-                                                                    <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-orange-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-900/10">
+                                                                    <button 
+                                                                        onClick={(e) => handleViewClick(customer, e)}
+                                                                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-orange-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-900/10"
+                                                                    >
                                                                         View Profile
                                                                     </button>
                                                                 </div>
@@ -338,7 +426,7 @@ const KoiCustomers = () => {
                                         <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-200 mb-4 border border-orange-100">
                                             <Users size={32} />
                                         </div>
-                                        <p className="text-gray-400 font-bold text-sm italic tracking-wide">No client records found.</p>
+                                        <p className="text-gray-400 font-bold text-sm tracking-wide">No client records found.</p>
                                     </div>
                                 )}
                             </AnimatePresence>
@@ -346,48 +434,6 @@ const KoiCustomers = () => {
                     </div>
                 </div>
 
-                {/* Sidebar Stats */}
-                <div className="flex flex-col gap-6">
-                    <StatCard
-                        title="Client Database"
-                        value={customers.length.toString().padStart(2, '0')}
-                        icon={Users}
-                        color="bg-orange-500"
-                        delay={0.1}
-                    />
-                    <div className="bg-orange-900 rounded-[2rem] p-8 text-white relative overflow-hidden group shadow-xl shadow-orange-900/20">
-                        <div className="absolute right-[-20%] bottom-[-10%] opacity-10 group-hover:scale-110 transition-transform duration-700">
-                            <Fish size={180} />
-                        </div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2">Portfolio Value</h4>
-                        <p className="text-3xl font-bold mb-4">Premium <span className="text-xs font-medium opacity-50 block mt-1">Tier-1 Enthusiasts</span></p>
-                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: '85%' }}
-                                transition={{ duration: 1.5, delay: 0.5 }}
-                                className="h-full bg-orange-500"
-                            />
-                        </div>
-                        <p className="text-[10px] font-bold opacity-40 mt-3 uppercase tracking-widest">Confidence: 85%</p>
-                    </div>
-
-                    <div className="bg-white rounded-[2rem] p-6 border border-gray-50 shadow-sm">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Engagement</h4>
-                        <div className="space-y-3">
-                            <button className="w-full flex items-center justify-between p-4 bg-orange-50/50 hover:bg-orange-100 rounded-2xl transition-all group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-orange-600 shadow-sm">
-                                        <CreditCard size={14} />
-                                    </div>
-                                    <span className="text-[10px] font-bold uppercase tracking-tight text-gray-600">Ledger Report</span>
-                                </div>
-                                <ArrowRight size={14} className="text-gray-300 group-hover:text-orange-600 -translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {/* Premium Registration Modal */}
             <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={isEditMode ? "PORTFOLIO UPDATE" : "CLIENT REGISTRATION"} maxWidth="max-w-xl">
@@ -397,7 +443,7 @@ const KoiCustomers = () => {
                             <Plus size={28} />
                         </div>
                         <div>
-                            <h4 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors uppercase italic font-black">{isEditMode ? 'Update Client Record' : 'Register New Client'}</h4>
+                            <h4 className="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors uppercase font-black">{isEditMode ? 'Update Client Record' : 'Register New Client'}</h4>
                             <p className="text-xs text-gray-400 font-medium mt-1 uppercase tracking-widest">Premium Koi Enthusiast Profile</p>
                         </div>
                     </div>
@@ -446,6 +492,140 @@ const KoiCustomers = () => {
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal 
+                isOpen={isDeleteModalOpen} 
+                onClose={() => setIsDeleteModalOpen(false)} 
+                title="CONFIRM DELETION" 
+                maxWidth="max-w-md"
+                accent="#EF4444"
+            >
+                <div className="p-6 text-center">
+                    <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-red-100">
+                        <Trash2 size={32} />
+                    </div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2 uppercase font-black">Are you sure?</h4>
+                    <p className="text-sm text-gray-500 mb-6 font-medium">
+                        Do you really want to delete <span className="font-bold text-gray-800">{customerToDelete?.name}</span>? This action cannot be undone.
+                    </p>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setIsDeleteModalOpen(false)}
+                            className="flex-1 py-3 bg-gray-50 text-gray-500 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 hover:text-gray-700 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleConfirmDelete}
+                            className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/20 active:scale-95"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* View Customer Modal */}
+            <Modal 
+                isOpen={isViewModalOpen} 
+                onClose={() => setIsViewModalOpen(false)} 
+                title="CLIENT PROFILE" 
+                maxWidth="max-w-4xl"
+                accent="#f97316"
+            >
+                {viewingCustomer && (
+                    <div className="p-8 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                            {/* Left Side: Client Details */}
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-5 border-b border-gray-50 pb-6">
+                                    <div className="w-16 h-16 rounded-2xl bg-orange-600 text-white flex items-center justify-center font-bold text-2xl shadow-lg shadow-orange-900/20">
+                                        {viewingCustomer.name[0].toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black text-gray-900 uppercase">
+                                            {viewingCustomer.name}
+                                        </h3>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                            <Phone size={14} className="text-orange-500" />
+                                            {viewingCustomer.phone}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                                            <MapPin size={16} />
+                                        </div>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Client Residence</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-700 leading-relaxed uppercase">
+                                        {viewingCustomer.address || "No address provided"}
+                                    </p>
+                                </div>
+
+                                <div className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                                            <ShoppingBag size={16} />
+                                        </div>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Engagement Level</span>
+                                    </div>
+                                    <p className="text-sm font-black text-orange-600 uppercase">
+                                        {viewingCustomer.purchaseFrequency || 0} Purchase Cycles
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Right Side: Collection History */}
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center justify-between gap-2 w-full">
+                                    <div className="flex items-center gap-2">
+                                        <ShoppingBag size={16} className="text-orange-500" /> Collection History
+                                    </div>
+                                    {customerDetails[viewingCustomer._id]?.orderHistory?.length > 0 && (
+                                        <span className="text-[#f97316] font-black text-xs bg-orange-50 px-2.5 py-1 rounded-lg shadow-sm">
+                                            Total: ₹{customerDetails[viewingCustomer._id].orderHistory.reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0).toLocaleString('en-IN')}
+                                        </span>
+                                    )}
+                                </h4>
+                                <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2">
+                                    {customerDetails[viewingCustomer._id]?.orderHistory?.length > 0 ? (
+                                        customerDetails[viewingCustomer._id].orderHistory.map((order, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:border-orange-200 transition-all shadow-sm">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-bold text-orange-600">{idx + 1}.</span>
+                                                    <div>
+                                                        <span className="block text-[11px] font-black text-gray-900 uppercase">#{order._id?.slice(-6).toUpperCase()}</span>
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase">{order.fishType || 'Unknown Variety'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs font-black text-gray-900">₹{order.totalAmount}</div>
+                                                    <div className="text-[9px] font-bold text-emerald-500 uppercase">{new Date(order.createdAt).toLocaleDateString('en-GB')}</div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="py-8 text-center bg-white/50 rounded-2xl border border-dashed border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">No previous collections</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end pt-4 border-t border-gray-50">
+                            <button
+                                onClick={() => setIsViewModalOpen(false)}
+                                className="px-6 py-3 bg-orange-600 text-white rounded-xl font-bold text-xs hover:bg-orange-700 transition-all shadow-lg shadow-orange-900/10 uppercase tracking-widest"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     );

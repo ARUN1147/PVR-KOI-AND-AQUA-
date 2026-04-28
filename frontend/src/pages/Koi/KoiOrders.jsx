@@ -148,7 +148,7 @@ const KoiOrders = () => {
                                             <span className="text-sm font-bold text-gray-700">{order.customer?.name}</span>
                                             <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 mt-0.5 tracking-tighter">
                                                 <Calendar size={12} />
-                                                Ordered {new Date(order.orderDate).toLocaleDateString()}
+                                                Ordered {new Date(order.orderDate).toLocaleDateString('en-GB')}
                                             </div>
                                         </div>
                                     </td>

@@ -147,13 +147,13 @@ const BossLayout = ({ role: initialRole, allocatedModules: initialModules }) => 
         ],
         KOI: [
             { icon: Fish, label: 'Dashboard', path: '/boss/koi/dashboard', color: '#F97316' },
+            { icon: Users, label: 'Customers', path: '/boss/koi/customers', color: '#F59E0B' },
             { icon: Clock, label: 'Attendance', path: '/boss/koi/attendance', color: '#8B5CF6' },
             { icon: Contact, label: 'Employees', path: '/boss/koi/employees', color: '#10B981' },
             { icon: MessageSquare, label: 'Enquiries', path: '/boss/koi/enquiries', color: '#F43F5E' },
             { icon: ShoppingCart, label: 'Sales', path: '/boss/koi/orders', color: '#06B6D4' },
             { icon: CreditCard, label: 'Payments', path: '/boss/koi/payments', color: '#F97316' },
             { icon: Package, label: 'Inventory', path: '/boss/koi/inventory', color: '#EC4899' },
-            { icon: Users, label: 'Customers', path: '/boss/koi/customers', color: '#F59E0B' },
             { icon: FileText, label: 'Invoices', path: '/boss/koi/invoices', color: '#14B8A6' },
             { icon: Settings, label: 'Settings', path: '/boss/koi/settings', color: '#64748B' },
         ]

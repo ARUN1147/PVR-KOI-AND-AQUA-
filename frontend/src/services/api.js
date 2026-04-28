@@ -114,6 +114,7 @@ export const deleteEmployee = (id) => api.delete(`/employees/${id}`);
 // Koi Centre Services
 export const getKoiEnquiries = () => api.get('/koi/enquiries');
 export const createKoiEnquiry = (data) => api.post('/koi/enquiries', data);
+export const updateKoiEnquiry = (id, data) => api.put(`/koi/enquiries/${id}`, data);
 export const updateKoiEnquiryStatus = (id, status) => api.patch(`/koi/enquiries/${id}/status`, { status });
 export const deleteKoiEnquiry = (id) => api.delete(`/koi/enquiries/${id}`);
 
@@ -126,6 +127,8 @@ export const updateKoiOrderStatus = (id, data) => api.patch(`/koi/orders/${id}/s
 export const getKoiInvoices = () => api.get('/koi/invoices');
 export const createKoiInvoice = (data) => api.post('/koi/invoices', data);
 export const getKoiInvoiceById = (id) => api.get(`/koi/invoices/${id}`);
+export const updateKoiInvoice = (id, data) => api.post('/koi/invoices', { ...data, _id: id });
+export const deleteKoiInvoice = (id) => api.post('/koi/invoices', { _id: id, action: 'delete' });
 
 export const getKoiPayments = () => api.get('/koi/payments');
 export const createKoiPayment = (data) => api.post('/koi/payments', data);

@@ -175,7 +175,7 @@ const KoiInventory = () => {
                                             </span>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <div className="text-lg font-black text-gray-900 flex items-center gap-1 italic tracking-tighter">
+                                            <div className="text-lg font-black text-gray-900 flex items-center gap-1 tracking-tighter">
                                                 <IndianRupee size={16} className="text-gray-300" />
                                                 {item.sellingPrice || 0}
                                             </div>
@@ -183,8 +183,8 @@ const KoiInventory = () => {
                                         <td className="px-8 py-5">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-baseline gap-1.5">
-                                                    <span className={`text-xl font-black ${isLow ? 'text-red-600' : 'text-gray-900'}`}>{item.totalAvailableQuantity}</span>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase">{item.unit}</span>
+                                                    <span className={`text-xl font-black not-italic ${isLow ? 'text-red-600' : 'text-gray-900'}`}>{item.totalAvailableQuantity}</span>
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase not-italic">{item.unit}</span>
                                                 </div>
                                                 {isLow && (
                                                     <span className="text-[9px] font-black text-red-500 uppercase flex items-center gap-1 animate-pulse">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
     Users,
@@ -14,7 +14,8 @@ import {
     Fish,
     ArrowRight,
     CreditCard,
-    MessageSquare
+    MessageSquare,
+    Plus
 } from 'lucide-react';
 import { getKoiOrders, getPendingKoiPayments, getLowKoiStock, getKoiCustomers, getKoiEnquiries } from '../../services/api';
 
@@ -30,12 +31,14 @@ const StatCard = ({ title, value, icon: Icon, color, delay }) => (
         </div>
         <div>
             <h3 className="text-[#F97316] text-[10px] font-bold uppercase tracking-widest opacity-80">{title}</h3>
-            <p className="text-2xl font-black text-[#1a365d] mt-1 italic tracking-tight">{value}</p>
+            <p className="text-2xl font-black text-[#1a365d] mt-1 tracking-tight">{value}</p>
         </div>
     </motion.div>
 );
 
 const KoiDashboard = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
     const [stats, setStats] = useState({
         totalOrders: 0,
         pendingPayments: 0,
@@ -87,8 +90,11 @@ const KoiDashboard = () => {
                         Track premium koi inventory, manage high-value sales & enquiries.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center sm:justify-start">
-                        <button className="bg-[#1a365d] text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm font-bold shadow-lg shadow-blue-900/20 hover:opacity-90 transition-all active:scale-95 flex items-center justify-center gap-2">
-                            New Sale <ArrowRight size={16} />
+                        <button 
+                            onClick={() => navigate(location.pathname.startsWith('/boss') ? '/boss/koi/customers' : '/koi/customers', { state: { openRegisterModal: true } })}
+                            className="bg-[#f97316] text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm font-bold shadow-lg shadow-orange-900/20 hover:bg-[#f97316]/90 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <Plus size={18} /> Register Client
                         </button>
                     </div>
                 </div>
@@ -99,7 +105,7 @@ const KoiDashboard = () => {
             </motion.div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-12">
                 <StatCard
                     title="Total Orders"
                     value={stats.totalOrders}
@@ -136,6 +142,7 @@ const KoiDashboard = () => {
                     delay={0.5}
                 />
             </div>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
@@ -206,7 +213,7 @@ const KoiDashboard = () => {
                             <h4 className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Finance</h4>
                             <p className="text-2xl font-bold mb-1">{stats.pendingPayments} Pending</p>
                             <p className="text-[10px] font-medium opacity-70 leading-relaxed mb-4">Follow up on high-value koi sales payments.</p>
-                            <Link to="/koi/payments" className="block w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all text-center">Open Payments</Link>
+                            <Link to={location.pathname.startsWith('/boss') ? '/boss/koi/payments' : '/koi/payments'} className="block w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all text-center">Open Payments</Link>
                         </div>
                     </div>
                 </div>

@@ -326,7 +326,7 @@ const KoiSales = () => {
         setTimeout(() => {
             const element = document.getElementById(targetId);
             const opt = {
-                margin: [10, 10],
+                margin: 0,
                 filename: fileName,
                 image: { type: 'jpeg', quality: 1.0 },
                 html2canvas: { scale: 3, useCORS: true },
@@ -343,13 +343,14 @@ const KoiSales = () => {
 
     const handlePrintHistory = (inv) => {
         setSelectedInvoice(inv);
-        setTimeout(() => window.print(), 300);
+        setIsViewModalOpen(true);
+        setTimeout(() => window.print(), 500);
     };
 
     const filteredInvoices = invoices.filter(inv =>
         (inv.customer?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
         (inv.invoiceNumber?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-    );
+    ).sort((a, b) => new Date(b.date || b.invoiceDate || b.createdAt || 0) - new Date(a.date || a.invoiceDate || a.createdAt || 0));
 
     if (loading) {
         return (
@@ -362,29 +363,95 @@ const KoiSales = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
+            <style>{`
+                @media print {
+                    /* Hide everything except the printable area */
+                    body * {
+                        visibility: hidden;
+                    }
+                    
+                    /* Show only the invoice container */
+                    #koi-invoice-to-print, #koi-invoice-to-print *,
+                    #view-invoice-to-print, #view-invoice-to-print * {
+                        visibility: visible;
+                    }
+                    
+                    /* Position the printable area at the top left of the page */
+                    #koi-invoice-to-print, #view-invoice-to-print {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        transform: none !important;
+                        background: white !important;
+                    }
+                    
+                    /* Hide elements that explicitly have 'no-print' */
+                    .no-print, .no-print *, .no-print-select, .no-print-input {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+
+                    /* Make inputs, selects, textareas look like plain text */
+                    input, select, textarea {
+                        border: none !important;
+                        background: transparent !important;
+                        box-shadow: none !important;
+                        -webkit-appearance: none;
+                        -moz-appearance: none;
+                        appearance: none;
+                        outline: none !important;
+                    }
+                }
+
+                /* PDF Export Styles */
+                .exporting-pdf .no-print, 
+                .exporting-pdf .no-print *, 
+                .exporting-pdf .no-print-select, 
+                .exporting-pdf .no-print-input {
+                    display: none !important;
+                    visibility: hidden !important;
+                }
+
+                .exporting-pdf input, 
+                .exporting-pdf select, 
+                .exporting-pdf textarea {
+                    border: none !important;
+                    background: transparent !important;
+                    box-shadow: none !important;
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
+                    appearance: none;
+                    outline: none !important;
+                }
+            `}</style>
             {/* Standardized Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 no-print">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Sales & Billing</h1>
-                    <p className="text-gray-500 mt-1">Unified module for orders, quotations, and tax invoices</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Sales & Billing</h1>
+                    <p className="text-gray-500 mt-1 text-sm sm:text-base">Unified module for orders, quotations, and tax invoices</p>
                 </div>
 
                 <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
                     <button
                         onClick={() => setActiveTab('orders')}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'orders' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'orders' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                     >
                         <ShoppingCart size={14} /> Orders
                     </button>
                     <button
                         onClick={() => setActiveTab('creator')}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'creator' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'creator' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                     >
                         <Receipt size={14} /> Creator
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'history' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                     >
                         <History size={14} /> History
                     </button>
@@ -408,11 +475,11 @@ const KoiSales = () => {
                         <div className="flex items-center gap-3 w-full md:w-auto">
                             <div className="flex items-center gap-4 text-sm px-4">
                                 <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Total Sales</span>
-                                <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full font-bold">{orders.length}</span>
+                                <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full font-bold">{orders.length}</span>
                             </div>
                             <button
                                 onClick={() => { resetOrderForm(); setIsOrderModalOpen(true); }}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 active:scale-95"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-orange-900/20 active:scale-95"
                             >
                                 <Plus size={18} />
                                 <span>Record Sale</span>
@@ -444,15 +511,15 @@ const KoiSales = () => {
                                             <tr key={order._id} className="hover:bg-gray-50/50 transition-colors group">
                                                 <td className="px-8 py-5">
                                                     <div className="flex flex-col">
-                                                        <span className="font-bold text-gray-900 italic tracking-tighter capitalize">#{order?._id?.slice(-6).toUpperCase()}</span>
-                                                        <span className={`text-[9px] font-black w-fit px-1.5 py-0.5 rounded mt-1 uppercase tracking-tighter ${order.orderType === 'Food' ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                        <span className="font-bold text-gray-900 tracking-tighter capitalize">#{order?._id?.slice(-6).toUpperCase()}</span>
+                                                        <span className={`text-[9px] font-black w-fit px-1.5 py-0.5 rounded mt-1 uppercase tracking-tighter ${order.orderType === 'Food' ? 'bg-orange-50 text-orange-600' : 'bg-orange-50 text-orange-600'}`}>
                                                             {order.orderType || 'Fish'}
                                                         </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-5">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-sm">
+                                                        <div className="w-9 h-9 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center font-bold text-sm">
                                                             {order.customer?.name?.[0] || 'C'}
                                                         </div>
                                                         <span className="font-bold text-gray-700 uppercase tracking-tight text-sm">{order.customer?.name}</span>
@@ -461,7 +528,7 @@ const KoiSales = () => {
                                                 <td className="px-8 py-5">
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-gray-900 text-sm">{order.fishType}</span>
-                                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">{order.quantity} Units</span>
+                                                        <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mt-0.5">{order.quantity} Units</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-5">
@@ -472,12 +539,12 @@ const KoiSales = () => {
                                                 </td>
                                                 <td className="px-8 py-5">
                                                     <div className="flex flex-col gap-1.5">
-                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit ${order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit ${order.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
                                                             {order.status === 'Completed' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                                                             {order.status}
                                                         </span>
                                                         {linkedInvoice && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase tracking-widest w-fit">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 text-orange-600 rounded text-[9px] font-black uppercase tracking-widest w-fit">
                                                                 <Receipt size={10} /> Bill Generated
                                                             </span>
                                                         )}
@@ -488,7 +555,7 @@ const KoiSales = () => {
                                                         {linkedInvoice ? (
                                                             <button
                                                                 onClick={() => handleViewInvoice(linkedInvoice)}
-                                                                className="p-2.5 bg-gray-900 text-white rounded-xl hover:bg-black transition-all shadow-sm"
+                                                                className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-orange-600 hover:text-white transition-all shadow-sm"
                                                                 title="View Invoice"
                                                             >
                                                                 <Eye size={16} />
@@ -496,7 +563,7 @@ const KoiSales = () => {
                                                         ) : (
                                                             <button
                                                                 onClick={() => jumpToInvoice(order)}
-                                                                className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2"
+                                                                className="p-2.5 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-100 transition-all font-bold text-[10px] uppercase tracking-widest flex items-center gap-2"
                                                                 title="Generate Bill"
                                                             >
                                                                 <Receipt size={16} />
@@ -549,7 +616,7 @@ const KoiSales = () => {
                     <div className="flex justify-center bg-gray-100 rounded-[3rem] p-12 min-h-[1000px] overflow-auto shadow-inner border-4 border-white">
                         <div
                             style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-                            className="bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative"
+                            className={`bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative ${isExporting ? 'exporting-pdf' : ''}`}
                             id="koi-invoice-to-print"
                         >
                             {/* PROFESSIONAL TAX INVOICE TEMPLATE */}
@@ -570,11 +637,19 @@ const KoiSales = () => {
                                                 value={invoiceFormData.companyInfo.name}
                                                 onChange={(e) => setInvoiceFormData({ ...invoiceFormData, companyInfo: { ...invoiceFormData.companyInfo, name: e.target.value } })}
                                             />
-                                            <textarea
-                                                style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line', textAlign: 'center', border: 'none', width: '100%', resize: 'none' }}
-                                                value={invoiceFormData.companyInfo.address}
-                                                onChange={(e) => setInvoiceFormData({ ...invoiceFormData, companyInfo: { ...invoiceFormData.companyInfo, address: e.target.value } })}
-                                            />
+                                            {isExporting ? (
+                                                <div style={{ fontSize: '10px', color: '#666', margin: '4px 0', textAlign: 'center', width: '100%' }}>
+                                                    {invoiceFormData.companyInfo.address.split('\n').map((line, idx) => (
+                                                        <div key={idx}>{line}</div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <textarea
+                                                    style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line', textAlign: 'center', border: 'none', width: '100%', resize: 'none' }}
+                                                    value={invoiceFormData.companyInfo.address}
+                                                    onChange={(e) => setInvoiceFormData({ ...invoiceFormData, companyInfo: { ...invoiceFormData.companyInfo, address: e.target.value } })}
+                                                />
+                                            )}
                                             <input
                                                 style={{ fontSize: '10px', color: '#666', margin: 0, textAlign: 'center', border: 'none', width: '100%' }}
                                                 value={invoiceFormData.companyInfo.contact}
@@ -612,12 +687,20 @@ const KoiSales = () => {
                                                     value={invoiceFormData.billingInfo.name}
                                                     onChange={(e) => setInvoiceFormData({ ...invoiceFormData, billingInfo: { ...invoiceFormData.billingInfo, name: e.target.value } })}
                                                 />
-                                                <textarea
-                                                    style={{ fontSize: '11px', border: 'none', resize: 'none', height: '40px', color: '#555', width: '100%' }}
-                                                    placeholder="Address"
-                                                    value={invoiceFormData.billingInfo.address}
-                                                    onChange={(e) => setInvoiceFormData({ ...invoiceFormData, billingInfo: { ...invoiceFormData.billingInfo, address: e.target.value } })}
-                                                />
+                                                {isExporting ? (
+                                                    <div style={{ fontSize: '11px', color: '#555', width: '100%' }}>
+                                                        {invoiceFormData.billingInfo.address.split('\n').map((line, idx) => (
+                                                            <div key={idx}>{line}</div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <textarea
+                                                        style={{ fontSize: '11px', border: 'none', resize: 'none', height: '40px', color: '#555', width: '100%' }}
+                                                        placeholder="Address"
+                                                        value={invoiceFormData.billingInfo.address}
+                                                        onChange={(e) => setInvoiceFormData({ ...invoiceFormData, billingInfo: { ...invoiceFormData.billingInfo, address: e.target.value } })}
+                                                    />
+                                                )}
                                                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                                                     <b style={{ fontSize: '11px' }}>Phone:</b>
                                                     <input
@@ -638,7 +721,7 @@ const KoiSales = () => {
                                             </div>
                                             {/* Sales & Tax */}
                                             <div style={{ padding: '4px 10px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '3px', background: '#fcfcfc' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                                                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
                                                     <span style={{ color: '#888', fontWeight: 'bold' }}>TAX CATEGORY:</span>
                                                     <select
                                                         style={{ border: 'none', fontSize: '10px', fontWeight: 'bold', background: 'transparent' }}
@@ -763,8 +846,8 @@ const KoiSales = () => {
                                         {/* Left: Total in Words */}
                                         <div style={{ padding: '15px', borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'flex-end', minHeight: '100px' }}>
                                             <div style={{ display: 'flex', gap: '4px', alignItems: 'baseline' }}>
-                                                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#1e3a8a' }}>Total In Words:</span>
-                                                <span style={{ fontSize: '10px', color: '#666', fontWeight: 'bold' }}>{numberToWords(invoiceFormData.totalAmount)}</span>
+                                                {/* Total In Words removed */}
+                                                
                                             </div>
                                         </div>
 
@@ -861,7 +944,7 @@ const KoiSales = () => {
                                 placeholder="Search invoices..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold"
+                                className="w-full pl-12 pr-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none transition-all font-semibold"
                             />
                         </div>
                     </div>
@@ -881,20 +964,20 @@ const KoiSales = () => {
                             <tbody className="divide-y divide-gray-50 text-sm">
                                 {filteredInvoices.length > 0 ? filteredInvoices.map((inv) => (
                                     <tr key={inv._id} className="hover:bg-gray-50/50 transition-all group">
-                                        <td className="px-8 py-6 font-bold text-gray-600">{new Date(inv.date).toLocaleDateString()}</td>
+                                        <td className="px-8 py-6 font-bold text-gray-600">{new Date(inv.date).toLocaleDateString('en-GB')}</td>
                                         <td className="px-8 py-6">
-                                            <div className="font-black text-gray-900 italic tracking-tighter text-lg">#{inv.invoiceNumber}</div>
+                                            <div className="font-black text-gray-900 tracking-tighter text-lg">#{inv.invoiceNumber}</div>
                                             {inv.order && (
-                                                <div className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-1 bg-blue-50 px-1 rounded w-fit">Ref Order: #{inv?.order?._id?.slice(-6).toUpperCase() || inv?.order?.toString()?.slice(-6).toUpperCase() || 'N/A'}</div>
+                                                <div className="text-[9px] font-black text-orange-500 uppercase tracking-widest mt-1 bg-orange-50 px-1 rounded w-fit">Ref Order: #{inv?.order?._id?.slice(-6).toUpperCase() || inv?.order?.toString()?.slice(-6).toUpperCase() || 'N/A'}</div>
 
                                             )}
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="font-black text-gray-900 uppercase tracking-tight">{inv.customer?.name}</div>
-                                            <div className="text-[10px] text-gray-400 font-black italic mt-0.5">{inv.customer?.phone}</div>
+                                            <div className="text-sm text-gray-500 font-bold mt-0.5">{inv.customer?.phone}</div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${inv.type === 'Fish' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                                            <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${inv.type === 'Fish' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
                                                 {inv.type}
                                             </span>
                                         </td>
@@ -908,7 +991,7 @@ const KoiSales = () => {
                                             <div className="flex gap-2 justify-end no-print">
                                                 <button
                                                     onClick={() => handleViewInvoice(inv)}
-                                                    className="p-3 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 text-gray-400 rounded-2xl transition-all shadow-sm"
+                                                    className="p-3 bg-gray-50 hover:bg-orange-50 hover:text-orange-600 text-gray-400 rounded-2xl transition-all shadow-sm"
                                                 >
                                                     <Eye size={18} />
                                                 </button>
@@ -949,7 +1032,7 @@ const KoiSales = () => {
                                 key={t}
                                 type="button"
                                 onClick={() => setOrderFormData({ ...orderFormData, orderType: t, fishType: '', price: 0, totalAmount: 0 })}
-                                className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all ${orderFormData.orderType === t ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'
+                                className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all ${orderFormData.orderType === t ? 'bg-orange-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'
                                     }`}
                             >
                                 {t.toUpperCase()}
@@ -978,7 +1061,7 @@ const KoiSales = () => {
                                     setOrderFormData({ ...orderFormData, enquiry: '', customer: '', fishType: '', price: 0, totalAmount: 0 });
                                 }
                             }}
-                            className="w-full px-6 py-4 bg-blue-50/50 border-2 border-blue-100 border-dashed rounded-3xl focus:ring-4 focus:ring-blue-500/20 transition-all font-bold text-xs uppercase tracking-widest appearance-none disabled:opacity-50"
+                            className="w-full px-6 py-4 bg-orange-50/50 border-2 border-orange-100 border-dashed rounded-3xl focus:ring-4 focus:ring-orange-500/20 transition-all font-bold text-xs uppercase tracking-widest appearance-none disabled:opacity-50"
                         >
                             <option value="">{orderFormData.orderType === 'Food' ? 'N/A for Food' : 'New Direct Order (No Enquiry)'}</option>
                             {enquiries.filter(e => e.status !== 'Converted').map(enq => (
@@ -994,7 +1077,7 @@ const KoiSales = () => {
                                 <button
                                     type="button"
                                     onClick={() => setIsCustomerModalOpen(true)}
-                                    className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                                    className="text-[10px] font-black text-orange-600 uppercase tracking-widest hover:underline"
                                 >
                                     + New Customer
                                 </button>
@@ -1003,7 +1086,7 @@ const KoiSales = () => {
                                 required
                                 value={orderFormData.customer}
                                 onChange={(e) => setOrderFormData({ ...orderFormData, customer: e.target.value })}
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-bold text-sm"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-bold text-sm"
                             >
                                 <option value="">Select Customer</option>
                                 {customers.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
@@ -1026,7 +1109,7 @@ const KoiSales = () => {
                                             totalAmount: orderFormData.quantity * (item?.sellingPrice || 0)
                                         });
                                     }}
-                                    className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-bold text-sm"
+                                    className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-bold text-sm"
                                 >
                                     <option value="">Select from Stock</option>
                                     {inventory.filter(i => i.category !== 'Fish').map(item => (
@@ -1050,7 +1133,7 @@ const KoiSales = () => {
                                                 totalAmount: orderFormData.quantity * (invItem ? invItem.sellingPrice : orderFormData.price)
                                             });
                                         }}
-                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-bold text-sm uppercase"
+                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-bold text-sm uppercase"
                                         placeholder="Enter Specification..."
                                     />
                                     <datalist id="order-inventory-list">
@@ -1071,7 +1154,7 @@ const KoiSales = () => {
                                 required
                                 value={orderFormData.quantity}
                                 onChange={(e) => setOrderFormData({ ...orderFormData, quantity: e.target.value, totalAmount: e.target.value * orderFormData.price })}
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-center font-bold"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 text-center font-bold"
                                 placeholder="0"
                             />
                         </div>
@@ -1082,13 +1165,13 @@ const KoiSales = () => {
                                 required
                                 value={orderFormData.price}
                                 onChange={(e) => setOrderFormData({ ...orderFormData, price: e.target.value, totalAmount: orderFormData.quantity * e.target.value })}
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-center font-bold"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 text-center font-bold"
                                 placeholder="0.00"
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 italic">Total Amount</label>
-                            <div className="w-full px-6 py-4 bg-blue-600 text-white rounded-2xl text-center font-black text-lg shadow-lg">
+                            <div className="w-full px-6 py-4 bg-orange-600 text-white rounded-2xl text-center font-black text-lg shadow-lg">
                                 ₹{orderFormData.totalAmount || 0}
                             </div>
                         </div>
@@ -1096,7 +1179,7 @@ const KoiSales = () => {
 
                     <div className="flex gap-6 pt-4">
                         <button type="button" onClick={() => setIsOrderModalOpen(false)} className="flex-1 py-5 bg-gray-100 text-gray-500 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-gray-200 transition-all">Cancel</button>
-                        <button type="submit" className="flex-1 py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] hover:shadow-2xl hover:shadow-blue-200 transition-all active:scale-95">Verify & Create</button>
+                        <button type="submit" className="flex-1 py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] hover:shadow-2xl hover:shadow-orange-200 transition-all active:scale-95">Verify & Create</button>
                     </div>
                 </form>
             </Modal>
@@ -1117,7 +1200,7 @@ const KoiSales = () => {
                                 required
                                 value={customerFormData.name}
                                 onChange={(e) => setCustomerFormData({ ...customerFormData, name: e.target.value })}
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold"
                                 placeholder="Enter Name"
                             />
                         </div>
@@ -1128,7 +1211,7 @@ const KoiSales = () => {
                                 required
                                 value={customerFormData.phone}
                                 onChange={(e) => setCustomerFormData({ ...customerFormData, phone: e.target.value })}
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold"
                                 placeholder="Contact Number"
                             />
                         </div>
@@ -1139,7 +1222,7 @@ const KoiSales = () => {
                             type="text"
                             value={customerFormData.gstNo}
                             onChange={(e) => setCustomerFormData({ ...customerFormData, gstNo: e.target.value })}
-                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold uppercase"
+                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold uppercase"
                             placeholder="GSTIN"
                         />
                     </div>
@@ -1148,13 +1231,13 @@ const KoiSales = () => {
                         <textarea
                             value={customerFormData.address}
                             onChange={(e) => setCustomerFormData({ ...customerFormData, address: e.target.value })}
-                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold min-h-[100px]"
+                            className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 font-bold min-h-[100px]"
                             placeholder="Complete Address"
                         />
                     </div>
                     <div className="flex gap-4 pt-4">
                         <button type="button" onClick={() => setIsCustomerModalOpen(false)} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancel</button>
-                        <button type="submit" className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-blue-100">Add & Select</button>
+                        <button type="submit" className="flex-1 py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-orange-100">Add & Select</button>
                     </div>
                 </form>
             </Modal>
@@ -1163,12 +1246,12 @@ const KoiSales = () => {
                 <div className="flex flex-col gap-6">
                     <div className="flex justify-end gap-3 no-print mb-4">
                         <button onClick={() => window.print()} className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"><Printer size={14} /> Print</button>
-                        <button onClick={() => handleDownloadPDF('view-invoice-to-print', `Koi_Inv_${selectedInvoice?.invoiceNumber}.pdf`)} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"><Download size={14} /> PDF</button>
+                        <button onClick={() => handleDownloadPDF('view-invoice-to-print', `Koi_Inv_${selectedInvoice?.invoiceNumber}.pdf`)} className="flex items-center gap-2 bg-orange-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-100"><Download size={14} /> PDF</button>
                     </div>
 
                     <div className="overflow-auto bg-gray-50 border-4 border-white p-12 rounded-[3.5rem] flex justify-center shadow-inner">
                         {selectedInvoice && (
-                            <div className="bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative" id="view-invoice-to-print">
+                            <div className={`bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative ${isExporting ? 'exporting-pdf' : ''}`} id="view-invoice-to-print">
                                 {/* PROFESSIONAL TAX INVOICE TEMPLATE (READ ONLY) */}
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
                                     <div style={{ textAlign: 'center', padding: '8px', fontWeight: 'bold', fontSize: '16px', background: '#eef2fb', color: '#1e3a8a', borderBottom: '1px solid #b0b8cc', letterSpacing: '4px' }}>
@@ -1178,7 +1261,11 @@ const KoiSales = () => {
                                         <div style={{ borderRight: '1px solid #b0b8cc' }}>
                                             <div style={{ padding: '12px', borderBottom: '1px solid #b0b8cc', textAlign: 'center' }}>
                                                 <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e3a8a', margin: 0 }}>{selectedInvoice.companyInfo?.name}</h2>
-                                                <p style={{ fontSize: '10px', color: '#666', margin: '4px 0', whiteSpace: 'pre-line' }}>{selectedInvoice.companyInfo?.address}</p>
+                                                <div style={{ fontSize: '10px', color: '#666', margin: '4px 0', textAlign: 'center' }}>
+                                                    {selectedInvoice.companyInfo?.address?.split('\n').map((line, idx) => (
+                                                        <div key={idx}>{line}</div>
+                                                    ))}
+                                                </div>
                                                 <p style={{ fontSize: '10px', color: '#666', margin: 0 }}>{selectedInvoice.companyInfo?.contact}</p>
                                                 <div style={{ background: '#f0f4ff', padding: '4px', marginTop: '8px', fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a' }}>
                                                     GSTIN: {selectedInvoice.companyInfo?.gstin}
@@ -1188,14 +1275,18 @@ const KoiSales = () => {
                                                 <div style={{ background: '#dde5f5', padding: '6px', textAlign: 'center', borderBottom: '1px solid #b0b8cc', fontWeight: 'bold', color: '#1e3a8a' }}>BILL TO</div>
 
                                                 <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                                                    <p style={{ fontWeight: 'bold', fontSize: '14px', margin: 0, color: '#111' }}>{selectedInvoice.billingInfo?.name}</p>
-                                                    <p style={{ fontSize: '11px', color: '#555', margin: 0 }}>{selectedInvoice.billingInfo?.address}</p>
-                                                    <p style={{ margin: 0, color: '#333' }}><b>Phone:</b> {selectedInvoice.billingInfo?.phone}</p>
-                                                    <p style={{ margin: 0, color: '#333' }}><b>GSTIN:</b> {selectedInvoice.billingInfo?.gstNo || 'N/A'}</p>
+                                                    <p style={{ fontWeight: 'bold', fontSize: '14px', margin: 0, color: '#111' }}>{selectedInvoice.billingInfo?.name || selectedInvoice.customer?.name}</p>
+                                                    <div style={{ fontSize: '11px', color: '#555', margin: 0 }}>
+                                                        {(selectedInvoice.billingInfo?.address || selectedInvoice.customer?.address)?.split('\n').map((line, idx) => (
+                                                            <div key={idx}>{line}</div>
+                                                        ))}
+                                                    </div>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>Phone:</b> {selectedInvoice.billingInfo?.phone || selectedInvoice.customer?.phone}</p>
+                                                    <p style={{ margin: 0, color: '#333' }}><b>GSTIN:</b> {selectedInvoice.billingInfo?.gstNo || selectedInvoice.customer?.gstNo || 'N/A'}</p>
                                                 </div>
                                                 {/* Sales & Tax */}
                                                 <div style={{ padding: '4px 10px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '3px', background: '#fcfcfc' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                                                    <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
                                                         <span style={{ color: '#888', fontWeight: 'bold' }}>TAX CATEGORY:</span>
                                                         <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#333' }}>
                                                             {selectedInvoice.taxPhase === 'Outside TN' ? 'Outside TN (IGST)' : 'Inside TN (CGST/SGST)'}
@@ -1212,7 +1303,7 @@ const KoiSales = () => {
                                             <div style={{ display: 'flex', borderBottom: '1px solid #b0b8cc', height: '40px' }}>
                                                 <div style={{ flex: 1, padding: '8px', fontWeight: 'bold', borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'center', color: '#1e3a8a' }}>DATE</div>
 
-                                                <div style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center' }}>{new Date(selectedInvoice.date).toLocaleDateString()}</div>
+                                                <div style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center' }}>{new Date(selectedInvoice.date).toLocaleDateString('en-GB')}</div>
                                             </div>
                                             <div style={{ padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, minHeight: '200px' }}>
                                                 <img src="/PVR.png" alt="Logo" style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain' }} />
@@ -1256,8 +1347,8 @@ const KoiSales = () => {
                                             {/* Left: Total in Words */}
                                             <div style={{ padding: '15px', borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'flex-end', minHeight: '100px' }}>
                                                 <div style={{ display: 'flex', gap: '4px', alignItems: 'baseline' }}>
-                                                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#1e3a8a' }}>Total In Words:</span>
-                                                    <span style={{ fontSize: '10px', color: '#666', fontWeight: 'bold' }}>{numberToWords(selectedInvoice.totalAmount)}</span>
+                                                    {/* Total In Words removed */}
+                                                    
                                                 </div>
                                             </div>
 
@@ -1354,7 +1445,7 @@ const KoiSales = () => {
                                 jumpToInvoice(justCreatedOrder);
                                 setIsSuccessModalOpen(false);
                             }}
-                            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.3em] shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all"
+                            className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.3em] shadow-xl shadow-orange-100 hover:bg-orange-700 transition-all"
                         >
                             Generate Invoice
                         </button>

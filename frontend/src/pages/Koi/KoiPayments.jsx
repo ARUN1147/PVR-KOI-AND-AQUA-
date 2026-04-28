@@ -71,12 +71,12 @@ const KoiPayments = () => {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
-                    <p className="text-gray-500 mt-1">Track payments and manage pending balances</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Payments</h1>
+                    <p className="text-gray-500 mt-1 text-sm sm:text-base">Track payments and manage pending balances</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 active:scale-95"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-orange-900/20 active:scale-95"
                 >
                     <Plus size={18} />
                     <span>Record Payment</span>
@@ -91,12 +91,12 @@ const KoiPayments = () => {
                         placeholder="Search by customer, method or order ID..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-100 transition-all font-medium"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-100 transition-all font-medium"
                     />
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                     <span className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Total Payments</span>
-                    <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full font-bold">{payments.length}</span>
+                    <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full font-bold">{payments.length}</span>
                 </div>
             </div>
 
@@ -117,7 +117,7 @@ const KoiPayments = () => {
                                 <tr>
                                     <td colSpan="5" className="px-8 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3">
-                                            <Loader2 className="animate-spin text-primary-500" size={32} />
+                                            <Loader2 className="animate-spin text-orange-500" size={32} />
                                             <p className="text-gray-400 font-medium italic">Loading payments...</p>
                                         </div>
                                     </td>
@@ -126,12 +126,12 @@ const KoiPayments = () => {
                                 <tr key={payment._id} className="hover:bg-gray-50/50 transition-colors group">
                                     <td className="px-8 py-5">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-bold text-lg">
+                                            <div className="w-11 h-11 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center font-bold text-lg">
                                                 {payment.customer?.name?.[0] || 'C'}
                                             </div>
                                             <div>
                                                 <p className="font-bold text-gray-900 leading-tight">{payment.customer?.name}</p>
-                                                <p className="text-[10px] font-black text-blue-600 mt-0.5 uppercase tracking-tighter italic">
+                                                <p className="text-[10px] font-black text-orange-600 mt-0.5 uppercase tracking-tighter">
                                                     Order #{payment.order?._id?.slice(-6).toUpperCase()}
                                                 </p>
                                             </div>
@@ -151,7 +151,7 @@ const KoiPayments = () => {
                                     </td>
                                     <td className="px-8 py-5">
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-700">{new Date(payment.paymentDate).toLocaleDateString()}</span>
+                                            <span className="text-sm font-bold text-gray-700">{new Date(payment.paymentDate).toLocaleDateString('en-GB')}</span>
                                             <span className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">{new Date(payment.paymentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
                                     </td>
@@ -194,7 +194,7 @@ const KoiPayments = () => {
                                 const ord = pendingOrders.find(o => o._id === e.target.value);
                                 setFormData({ ...formData, order: e.target.value, customer: ord?.customer?._id, amount: ord?.totalAmount });
                             }}
-                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-semibold appearance-none"
+                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold appearance-none"
                         >
                             <option value="">Select Order</option>
                             {pendingOrders.map(o => <option key={o._id} value={o._id}>#{o._id.slice(-6).toUpperCase()} - {o.customer?.name} (₹{o.totalAmount})</option>)}
@@ -209,7 +209,7 @@ const KoiPayments = () => {
                                 required
                                 value={formData.amount}
                                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-semibold"
+                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold"
                                 placeholder="0.00"
                             />
                         </div>
@@ -219,7 +219,7 @@ const KoiPayments = () => {
                                 required
                                 value={formData.paymentMethod}
                                 onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary-500 transition-all font-semibold appearance-none"
+                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all font-semibold appearance-none"
                             >
                                 <option value="UPI">UPI / GPay</option>
                                 <option value="Cash">Cash</option>
@@ -239,7 +239,7 @@ const KoiPayments = () => {
                         </button>
                         <button
                             type="submit"
-                            className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-bold uppercase tracking-widest hover:bg-primary-700 transition-all shadow-lg shadow-blue-100"
+                            className="flex-1 py-4 bg-orange-600 text-white rounded-2xl font-bold uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-100"
                         >
                             Save Record
                         </button>

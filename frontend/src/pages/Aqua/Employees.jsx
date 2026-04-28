@@ -248,7 +248,7 @@ const Employees = () => {
                                                         {employee.department || employee.designation || 'Staff'}
                                                     </span>
                                                     <span className="text-[10px] text-gray-400 font-medium ml-1">
-                                                        Joined {new Date(employee.joiningDate).toLocaleDateString()}
+                                                        Joined {new Date(employee.joiningDate).toLocaleDateString('en-GB')}
                                                     </span>
                                                 </div>
                                             </td>
