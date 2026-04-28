@@ -1,4 +1,5 @@
 const express = require('express');
+// Triggering nodemon restart for new routes
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');

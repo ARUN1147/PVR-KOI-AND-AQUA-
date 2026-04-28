@@ -43,6 +43,15 @@ exports.updateEnquiryStatus = async (req, res) => {
     }
 };
 
+exports.updateEnquiry = async (req, res) => {
+    try {
+        const enquiry = await KoiEnquiry.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(enquiry);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+};
+
 exports.deleteEnquiry = async (req, res) => {
     try {
         await KoiEnquiry.findByIdAndDelete(req.params.id);
@@ -51,3 +60,4 @@ exports.deleteEnquiry = async (req, res) => {
         res.status(400).json({ message: err.message });
     }
 };
+

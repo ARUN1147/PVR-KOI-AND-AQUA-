@@ -109,13 +109,13 @@ const KoiLayout = ({ role: initialRole, allocatedModules: initialModules }) => {
 
     const menuItems = [
         { icon: Fish, label: 'Dashboard', path: '/koi/dashboard', color: '#F97316' },
+        { icon: Users, label: 'Customers', path: '/koi/customers', color: '#F59E0B' },
         { icon: Clock, label: 'Attendance', path: '/koi/attendance', color: '#8B5CF6' },
         { icon: Contact, label: 'Employees', path: '/koi/employees', color: '#10B981' },
         { icon: MessageSquare, label: 'Enquiries', path: '/koi/enquiries', color: '#F43F5E' },
         { icon: ShoppingCart, label: 'Sales & Billing', path: '/koi/orders', color: '#06B6D4' },
         { icon: CreditCard, label: 'Payments', path: '/koi/payments', color: '#F97316' },
         { icon: Package, label: 'Inventory', path: '/koi/inventory', color: '#EC4899' },
-        { icon: Users, label: 'Customers', path: '/koi/customers', color: '#F59E0B' },
         { icon: FileText, label: 'Invoices', path: '/koi/invoices', color: '#14B8A6' },
     ].filter(item => {
         if (['BOSS', 'MANAGER', 'KOI', 'KOIMANAGER', 'BRANCHMANAGER', 'ADMIN'].includes(role)) return true;

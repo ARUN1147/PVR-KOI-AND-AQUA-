@@ -27,7 +27,8 @@ const koiInvoiceSchema = new mongoose.Schema({
         address: { type: String },
         contact: { type: String },
         gstin: { type: String }
-    }
+    },
+    isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('KoiInvoice', koiInvoiceSchema);
