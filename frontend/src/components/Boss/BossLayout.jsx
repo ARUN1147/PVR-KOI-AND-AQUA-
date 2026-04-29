@@ -107,7 +107,7 @@ const BossLayout = ({ role: initialRole, allocatedModules: initialModules }) => 
     useEffect(() => {
         if (location.pathname.includes('/koi')) {
             setActiveModule('KOI');
-        } else if (['/boss-dashboard', '/boss/users', '/boss/reports', '/boss/modules', '/boss/roles', '/boss/personnel', '/staff/dashboard', '/staff/attendance'].includes(location.pathname)) {
+        } else if (['/boss-dashboard', '/boss/users', '/boss/reports', '/boss/modules', '/boss/roles', '/boss/personnel'].includes(location.pathname)) {
             setActiveModule('MASTER');
         } else if (location.pathname === '/' || location.pathname.startsWith('/boss/')) {
             if (!['/boss-dashboard', '/boss/users', '/boss/reports', '/boss/modules', '/boss/roles', '/boss/personnel'].includes(location.pathname)) {
@@ -127,7 +127,6 @@ const BossLayout = ({ role: initialRole, allocatedModules: initialModules }) => 
         MASTER: [
             { icon: LayoutDashboard, label: 'Dashboard', path: '/boss-dashboard', color: '#3B82F6' },
             { icon: ShieldCheck, label: 'Staff & Access', path: '/boss/personnel', color: '#A855F7' },
-            { icon: CheckSquare, label: 'Staff Portal View', path: '/staff/dashboard', color: '#10B981' },
             { icon: Shield, label: 'Module Allocation', path: '/boss/modules', color: '#EF4444' },
             { icon: BarChart3, label: 'Reports', path: '/boss/reports', color: '#0EA5E9' },
         ],

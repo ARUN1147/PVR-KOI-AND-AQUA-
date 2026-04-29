@@ -80,7 +80,7 @@ function App() {
         
         console.log('App: Redirecting based on normalized role:', r);
         
-        if (r === 'BOSS' || r === 'MANAGER') return "/boss-dashboard";
+        if (r === 'BOSS' || r === 'MANAGER' || r === 'GENERALMANAGER' || r === 'GENERAL_MANAGER') return "/boss-dashboard";
         
         // Check allocated modules first for portal access
         if (allocatedModules.includes('Staff:Portal')) return "/staff/dashboard";
@@ -121,9 +121,9 @@ function App() {
                             <ProtectedRoute 
                                 isAuthenticated={isAuthenticated} 
                                 role={role} 
-                                allowedRoles={['ADMIN', 'KOI', 'KOIMANAGER', 'KOI_MANAGER', 'STAFF', 'BRANCHMANAGER', 'BOSS', 'MANAGER', 'AQUAMANAGER', 'GENERAL_STAFF', 'GENERALSTAFF', 'GENERAL_EMPLOYEE', 'GENERALEMPLOYEE']}
+                                allowedRoles={['ADMIN', 'KOI', 'KOIMANAGER', 'KOI_MANAGER', 'STAFF', 'BRANCHMANAGER', 'BOSS', 'MANAGER', 'AQUAMANAGER', 'GENERAL_STAFF', 'GENERALSTAFF', 'GENERAL_EMPLOYEE', 'GENERALEMPLOYEE', 'GENERALMANAGER', 'GENERAL_MANAGER']}
                             >
-                                {isAuthenticated && (role === 'BOSS' || role === 'MANAGER') ? <Navigate to="/boss-dashboard" replace /> : <KoiLayout role={role} allocatedModules={allocatedModules} />}
+                                {isAuthenticated && (role === 'BOSS' || role === 'MANAGER' || role === 'GENERALMANAGER' || role === 'GENERAL_MANAGER') ? <Navigate to="/boss-dashboard" replace /> : <KoiLayout role={role} allocatedModules={allocatedModules} />}
                             </ProtectedRoute>
                         }
                     >
@@ -147,9 +147,9 @@ function App() {
                             <ProtectedRoute 
                                 isAuthenticated={isAuthenticated} 
                                 role={role} 
-                                allowedRoles={['ADMIN', 'AQUA', 'AQUAMANAGER', 'AQUA_MANAGER', 'STAFF', 'BRANCHMANAGER', 'BOSS', 'MANAGER', 'GENERAL_STAFF', 'GENERALSTAFF', 'GENERAL_EMPLOYEE', 'GENERALEMPLOYEE']}
+                                allowedRoles={['ADMIN', 'AQUA', 'AQUAMANAGER', 'AQUA_MANAGER', 'STAFF', 'BRANCHMANAGER', 'BOSS', 'MANAGER', 'GENERAL_STAFF', 'GENERALSTAFF', 'GENERAL_EMPLOYEE', 'GENERALEMPLOYEE', 'GENERALMANAGER', 'GENERAL_MANAGER']}
                             >
-                                {isAuthenticated && (role === 'BOSS' || role === 'MANAGER') ? <Navigate to="/boss-dashboard" replace /> : <AquaLayout role={role} allocatedModules={allocatedModules} />}
+                                {isAuthenticated && (role === 'BOSS' || role === 'MANAGER' || role === 'GENERALMANAGER' || role === 'GENERAL_MANAGER') ? <Navigate to="/boss-dashboard" replace /> : <AquaLayout role={role} allocatedModules={allocatedModules} />}
                             </ProtectedRoute>
                         }
                     >
@@ -171,7 +171,7 @@ function App() {
                     {/* BOSS & MANAGER UNIFIED EXPERIENCE */}
                     <Route
                         element={
-                            <ProtectedRoute isAuthenticated={isAuthenticated} role={role} allowedRoles={['BOSS', 'MANAGER']}>
+                            <ProtectedRoute isAuthenticated={isAuthenticated} role={role} allowedRoles={['BOSS', 'MANAGER', 'GENERALMANAGER', 'GENERAL_MANAGER']}>
                                 <BossLayout role={role} allocatedModules={allocatedModules} />
                             </ProtectedRoute>
                         }
@@ -219,7 +219,7 @@ function App() {
                             <ProtectedRoute 
                                 isAuthenticated={isAuthenticated} 
                                 role={role} 
-                                allowedRoles={['STAFF', 'ADMIN', 'BOSS', 'MANAGER', 'GENERAL_STAFF', 'GENERALSTAFF', 'GENERAL_EMPLOYEE', 'GENERALEMPLOYEE', 'EMP', 'EMPLOYEE']}
+                                allowedRoles={['STAFF', 'ADMIN', 'GENERAL_STAFF', 'GENERALSTAFF', 'GENERAL_EMPLOYEE', 'GENERALEMPLOYEE', 'EMP', 'EMPLOYEE']}
                             >
                                 <StaffLayout />
                             </ProtectedRoute>

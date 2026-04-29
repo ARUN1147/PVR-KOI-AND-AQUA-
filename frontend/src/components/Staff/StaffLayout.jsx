@@ -187,7 +187,7 @@ const StaffLayout = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {['BOSS', 'MANAGER', 'ADMIN'].includes(role) && (
+                        {['ADMIN'].includes(role) && (
                             <button onClick={() => navigate('/boss-dashboard')} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-all">
                                 <ArrowLeft size={16} />
                                 <span>Exit to Boss</span>

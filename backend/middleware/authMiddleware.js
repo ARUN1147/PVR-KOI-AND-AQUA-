@@ -26,8 +26,14 @@ exports.authorize = (...roles) => {
         
         const normalizedAllowedRoles = roles.map(r => r.toUpperCase().trim().replace(/[\s_-]/g, ''));
 
-        // MD (BOSS) and General Manager (MANAGER) have system-wide access
-        if (normalizedUserRole === 'BOSS' || normalizedUserRole === 'MANAGER' || normalizedAllowedRoles.includes(normalizedUserRole)) {
+        // MD (BOSS) and General Manager (MANAGER/GENERALMANAGER) have system-wide access
+        if (
+            normalizedUserRole === 'BOSS' || 
+            normalizedUserRole === 'MANAGER' || 
+            normalizedUserRole === 'GENERALMANAGER' || 
+            normalizedUserRole === 'GENERAL_MANAGER' ||
+            normalizedAllowedRoles.includes(normalizedUserRole)
+        ) {
             return next();
         }
         return res.status(403).json({ message: `User role ${req.user.role} is not authorized to access this route` });

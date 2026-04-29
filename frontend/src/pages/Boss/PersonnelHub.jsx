@@ -5,7 +5,8 @@ import {
     Filter, Mail, Briefcase, MapPin, CheckCircle2, 
     X, Fingerprint, Camera, RefreshCw, Settings2,
     Plus, Check, Info, Layout, Droplets, Fish,
-    AlertCircle, Loader2, Sparkles, ArrowLeft, Save
+    AlertCircle, Loader2, Sparkles, ArrowLeft, Save,
+    Eye, EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -24,9 +25,10 @@ const PersonnelHub = () => {
     const [employees, setEmployees] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [userFormData, setUserFormData] = useState({
-        name: '', email: '', password: '', role: '', branch: 'Aqua Culture',
+        name: '', email: '', password: '', role: '', branch: 'Global (All Branches)',
         allocatedModules: [],
         employeeId: '',
         isStaffPortalEnabled: false
@@ -91,6 +93,7 @@ const PersonnelHub = () => {
     };
 
     const handleOpenUserModal = (user = null) => {
+        setShowPassword(false); // Reset show password when opening
         if (user) {
             setEditingUser(user);
             const linkedEmp = employees.find(e => e._id === user.employeeId);
@@ -109,7 +112,7 @@ const PersonnelHub = () => {
             setEditingUser(null);
             const defaultRole = roles.length > 0 ? roles[0].key : 'BOSS';
             setUserFormData({
-                name: '', email: '', password: '', role: defaultRole, branch: 'Aqua Culture',
+                name: '', email: '', password: '', role: defaultRole, branch: 'Global (All Branches)',
                 allocatedModules: roles.length > 0 ? roles[0].modules : [],
                 employeeId: ''
             });
@@ -199,12 +202,21 @@ const PersonnelHub = () => {
     };
 
     const handleRoleDelete = async (id) => {
-        if (!window.confirm('Are you sure?')) return;
+        if (!window.confirm('Are you sure you want to delete this role?')) return;
         try {
-            await api.deleteRole(id);
-            fetchAll();
+            console.log('Attempting to delete role with ID:', id);
+            const response = await api.deleteRole(id);
+            console.log('Delete response:', response.data);
+            
+            // Immediately remove from local state for instant UI update
+            setRoles(prevRoles => prevRoles.filter(role => role._id !== id));
+            
+            // Then sync with server
+            await fetchAll();
         } catch (err) {
-            alert('Error deleting role');
+            console.error('Full Error during role deletion:', err);
+            const errorMessage = err.response?.data?.message || 'Error deleting role';
+            alert(`Failed to delete role: ${errorMessage}`);
         }
     };
 
@@ -528,77 +540,154 @@ const PersonnelHub = () => {
 
             {/* Registration Modal */}
             {isUserModalOpen && (
-                <div className="fixed inset-0 z-[100] flex justify-center items-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-                    <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative animate-in zoom-in duration-300">
-                        <button onClick={() => setIsUserModalOpen(false)} className="absolute right-8 top-8 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"><X size={24} /></button>
+                <div className="fixed inset-0 z-[100] flex justify-center items-center bg-slate-900/60 backdrop-blur-md p-4 overflow-y-auto">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative"
+                    >
+                        <button onClick={() => setIsUserModalOpen(false)} className="absolute right-8 top-8 p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all group">
+                            <X size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                        </button>
                         
                         {!isFaceModalOpen ? (
                             <>
-                                <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
-                                    <UserPlus className="text-indigo-600" size={32} />
-                                    {editingUser ? 'UPDATE PERSONNEL' : 'OFFICER REGISTRATION'}
-                                </h2>
+                                <div className="mb-10">
+                                    <h2 className="text-3xl font-black text-slate-900 flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                                            <UserPlus size={28} />
+                                        </div>
+                                        <div>
+                                            <span className="block leading-tight">{editingUser ? 'UPDATE' : 'REGISTER'}</span>
+                                            <span className="block text-indigo-600 text-sm tracking-[0.2em] font-black uppercase mt-1">Personnel Security Profile</span>
+                                        </div>
+                                    </h2>
+                                </div>
 
-                                <form onSubmit={handleUserSubmit} className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-6">
+                                <form onSubmit={handleUserSubmit} className="space-y-8">
+                                    {/* Identity Section */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Identity</label>
-                                            <input required className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 outline-none font-bold" value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value})} />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Legal Identity</label>
+                                            <input required className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none font-bold transition-all text-slate-700" value={userFormData.name} onChange={(e) => setUserFormData({...userFormData, name: e.target.value})} placeholder="e.g. Johnathan Doe" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Professional Email</label>
-                                            <input required type="email" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 outline-none font-bold" value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value})} />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">System Access Email</label>
+                                            <input required type="email" className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none font-bold transition-all text-slate-700" value={userFormData.email} onChange={(e) => setUserFormData({...userFormData, email: e.target.value})} placeholder="john@pvr-aqua.com" />
                                         </div>
                                     </div>
 
-                                    {!editingUser && (
+                                    {/* Security & Access Section */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Secure Passkey</label>
-                                            <input required type="password" placeholder="Min 6 characters recommended" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 outline-none font-bold" value={userFormData.password} onChange={(e) => setUserFormData({...userFormData, password: e.target.value})} />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Matrix (Role)</label>
+                                            <div className="relative">
+                                                <select className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none font-bold appearance-none cursor-pointer text-slate-700 transition-all" value={userFormData.role} onChange={(e) => handleUserRoleChange(e.target.value)}>
+                                                    {roles.map(r => <option key={r._id} value={r.key}>{r.name}</option>)}
+                                                </select>
+                                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                                    <Shield size={18} />
+                                                </div>
+                                            </div>
                                         </div>
-                                    )}
-
-                                    <div className="grid grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assigned Matrix (Role)</label>
-                                            <select className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 outline-none font-bold appearance-none cursor-pointer" value={userFormData.role} onChange={(e) => handleUserRoleChange(e.target.value)}>
-                                                {roles.map(r => <option key={r._id} value={r.key}>{r.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Operational Branch</label>
-                                            <select className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-100 outline-none font-bold appearance-none cursor-pointer" value={userFormData.branch} onChange={(e) => setUserFormData({...userFormData, branch: e.target.value})}>
-                                                <option value="Aqua Culture">Aqua Culture</option>
-                                                <option value="Koi Centre">Koi Centre</option>
-                                            </select>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Operational Branch</label>
+                                            <div className="relative">
+                                                <select className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none font-bold appearance-none cursor-pointer text-slate-700 transition-all" value={userFormData.branch} onChange={(e) => setUserFormData({...userFormData, branch: e.target.value})}>
+                                                    <option value="Global (All Branches)">Global (All Branches)</option>
+                                                    <option value="Aqua Culture">Aqua Culture</option>
+                                                    <option value="Koi Centre">Koi Centre</option>
+                                                </select>
+                                                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                                    <MapPin size={18} />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="p-8 bg-indigo-50/30 rounded-[2rem] border-2 border-dashed border-indigo-100 space-y-6">
-                                        <div className="flex items-center justify-between border-b border-indigo-100/50 pb-4">
-                                            <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
-                                                <Fingerprint size={16} /> BIOMETRIC PROTOCOL
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Encryption Passkey</label>
+                                        <div className="relative">
+                                            <input 
+                                                required={!editingUser}
+                                                type={showPassword ? "text" : "password"} 
+                                                placeholder={editingUser ? "Leave blank to keep existing passkey" : "Enter a secure unique passkey"} 
+                                                className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none font-bold transition-all text-slate-700 pr-14" 
+                                                value={userFormData.password} 
+                                                onChange={(e) => setUserFormData({...userFormData, password: e.target.value})} 
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Biometric & Portal Protocol Box */}
+                                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                <Fingerprint className="text-indigo-600" size={18} /> IDENTITY AUTHENTICATION
                                             </h4>
+                                            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Portal Access</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setUserFormData({...userFormData, isStaffPortalEnabled: !userFormData.isStaffPortalEnabled})}
+                                                    className={`w-10 h-5 rounded-full transition-all relative ${userFormData.isStaffPortalEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                                >
+                                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${userFormData.isStaffPortalEnabled ? 'left-6' : 'left-1'}`} />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-6">
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">RFID CARD IDENTITY</label>
-                                                <div className="relative">
-                                                    <input className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none" value={rfid} onChange={(e) => setRfid(e.target.value)} />
-                                                    <button type="button" onClick={handleGenerateRFID} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all"><RefreshCw size={16} /></button>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RFID CARD IDENTITY</label>
+                                                <div className="relative group">
+                                                    <input 
+                                                        className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-100 outline-none transition-all pr-12" 
+                                                        value={rfid} 
+                                                        onChange={(e) => setRfid(e.target.value)} 
+                                                        placeholder="SCAN OR ENTER ID"
+                                                    />
+                                                    <button type="button" onClick={handleGenerateRFID} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                                                        <RefreshCw size={18} />
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div className="flex flex-col justify-end">
-                                                <button type="button" onClick={() => setIsFaceModalOpen(true)} className="w-full py-4 bg-white border border-indigo-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2">
-                                                    <Camera size={18} /> {faceEncodings.length > 0 ? 'UPDATE FACIAL DATA' : 'ENROLL FACIAL MAP'}
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setIsFaceModalOpen(true)}
+                                                    className="w-full py-4 bg-white border-2 border-indigo-600 text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-3 group shadow-sm"
+                                                >
+                                                    <Camera size={18} className="group-hover:scale-110 transition-transform" />
+                                                    {userFormData.faceDescriptor ? 'BIOMETRIC REGISTERED' : 'ENROLL FACIAL MAP'}
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-4 pt-4">
-                                        <button type="button" onClick={() => setIsUserModalOpen(false)} className="flex-1 py-5 bg-gray-100 text-gray-500 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-gray-200 transition-all">ABORT</button>
-                                        <button type="submit" className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95">AUTHORIZE ACCESS</button>
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-4 pt-4">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIsUserModalOpen(false)}
+                                            className="flex-1 py-5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black text-sm uppercase tracking-widest transition-all"
+                                        >
+                                            ABORT
+                                        </button>
+                                        <button 
+                                            type="submit" 
+                                            className="flex-[2] py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                                        >
+                                            <CheckCircle2 size={20} />
+                                            {editingUser ? 'CONFIRM CHANGES' : 'AUTHORIZE ACCESS'}
+                                        </button>
                                     </div>
                                 </form>
                             </>
@@ -609,7 +698,7 @@ const PersonnelHub = () => {
                                 onCancel={() => setIsFaceModalOpen(false)}
                             />
                         )}
-                    </div>
+                    </motion.div>
                 </div>
             )}
         </div>
