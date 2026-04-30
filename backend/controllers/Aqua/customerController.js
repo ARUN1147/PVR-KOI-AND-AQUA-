@@ -26,8 +26,8 @@ exports.getCustomers = async (req, res) => {
 
 exports.createCustomer = async (req, res) => {
     try {
-        const { name, phone, email, address, gstNo } = req.body;
-        const customer = await Customer.create({ name, phone, email, address, gstNo });
+        const { name, phone, email, address, gstNo, location } = req.body;
+        const customer = await Customer.create({ name, phone, email, address, gstNo, location });
         res.status(201).json(customer);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -45,8 +45,8 @@ exports.getCustomerById = async (req, res) => {
 
 exports.updateCustomer = async (req, res) => {
     try {
-        const { name, phone, email, address, gstNo } = req.body;
-        const customer = await Customer.findByIdAndUpdate(req.params.id, { name, phone, email, address, gstNo }, { new: true });
+        const { name, phone, email, address, gstNo, location } = req.body;
+        const customer = await Customer.findByIdAndUpdate(req.params.id, { name, phone, email, address, gstNo, location }, { new: true });
         res.json(customer);
     } catch (err) {
         res.status(400).json({ message: err.message });

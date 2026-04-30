@@ -16,7 +16,7 @@ const Login = ({ onLogin }) => {
             const role = originalRole.toUpperCase();
 
             // For internal logic, normalize key by removing spaces/underscores
-            const roleKey = role.trim().replace(/[\s_]/g, '');
+            const roleKey = role.trim().replace(/[\s_-]/g, '');
 
             localStorage.setItem('token', token);
             localStorage.setItem('role', role);

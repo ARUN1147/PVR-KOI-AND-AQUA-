@@ -18,7 +18,11 @@ import {
     Droplets,
     Fish,
     Calendar,
-    CheckCircle2
+    CheckCircle2,
+    FileText,
+    HardDrive,
+    Hammer,
+    Wrench
 } from 'lucide-react';
 import * as api from '../../services/api';
 import Modal from '../../components/Modal';
@@ -31,6 +35,15 @@ const StaffDashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
     const [isNewCustomer, setIsNewCustomer] = useState(false);
+    const allocatedModules = JSON.parse(localStorage.getItem('allocatedModules') || '[]');
+    const hasFullAccess = allocatedModules.includes('Staff:Portal');
+
+    // Specialized Role Permissions
+    const permissions = {
+        isTechnician: hasFullAccess || allocatedModules.includes('Staff:Technician'),
+        isInstallation: hasFullAccess || allocatedModules.includes('Staff:Installation'),
+        isService: hasFullAccess || allocatedModules.includes('Staff:Service')
+    };
 
     const [formData, setFormData] = useState({
         customerId: '',
@@ -40,7 +53,10 @@ const StaffDashboard = () => {
         details: '',
         orderNote: '',
         type: 'Installation',
-        branch: 'Aqua'
+        branch: 'Aqua',
+        address: '',
+        googleMapsLink: '',
+        designUrl: ''
     });
 
     useEffect(() => {
@@ -48,7 +64,7 @@ const StaffDashboard = () => {
         setShowDropdown(false);
         setIsNewCustomer(false);
         if (!activeModal) {
-            setFormData(prev => ({ ...prev, customerId: '', leadName: '', leadPhone: '', description: '', details: '', orderNote: '' }));
+            setFormData(prev => ({ ...prev, customerId: '', leadName: '', leadPhone: '', address: '', googleMapsLink: '', description: '', details: '', orderNote: '' }));
         }
     }, [activeModal]);
 
@@ -101,7 +117,7 @@ const StaffDashboard = () => {
                     await api.createKoiEnquiry(payload);
                 } else {
                     const payload = isNewCustomer
-                        ? { leadName: formData.leadName, leadPhone: formData.leadPhone, details: formData.details }
+                        ? { leadName: formData.leadName, leadPhone: formData.leadPhone, address: formData.address, googleMapsLink: formData.googleMapsLink, details: formData.details }
                         : { customerId: formData.customerId, details: formData.details };
 
                     if (!isNewCustomer && !formData.customerId) return alert('Please select a customer first');
@@ -125,7 +141,7 @@ const StaffDashboard = () => {
             setActiveModal(null);
             setSearchTerm('');
             setIsNewCustomer(false);
-            setFormData({ ...formData, customerId: '', leadName: '', leadPhone: '', description: '', details: '', orderNote: '' });
+            setFormData({ ...formData, customerId: '', leadName: '', leadPhone: '', address: '', googleMapsLink: '', description: '', details: '', orderNote: '' });
             alert(`${activeModal.charAt(0).toUpperCase() + activeModal.slice(1)} raised successfully!`);
         } catch (err) {
             alert(`Error raising ${activeModal}: ` + (err.response?.data?.message || err.message));
@@ -145,6 +161,8 @@ const StaffDashboard = () => {
     const stats = {
         pending: tasks.filter(t => t.status === 'Pending').length,
         ongoing: tasks.filter(t => ['Travelling', 'Arrived', 'In Progress'].includes(t.status)).length,
+        installations: tasks.filter(t => t.type === 'Installation' && t.status !== 'Completed').length,
+        services: tasks.filter(t => t.type === 'Service' && t.status !== 'Completed').length,
         completedToday: tasks.filter(t => 
             (['Completed', 'Work completed'].includes(t.status)) && 
             new Date(t.updatedAt).toDateString() === new Date().toDateString()
@@ -165,6 +183,7 @@ const StaffDashboard = () => {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <div className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[8px] font-black uppercase tracking-widest rounded-full">Operational Hub</div>
+                            {permissions.isTechnician && <div className="px-2 py-0.5 bg-indigo-100 text-indigo-600 text-[8px] font-black uppercase tracking-widest rounded-full">Design Lead</div>}
                         </div>
                         <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-none">
                             Operational <span className="text-blue-600">Matrix</span>
@@ -176,27 +195,33 @@ const StaffDashboard = () => {
                     
                     {/* Compact Quick Actions */}
                     <div className="flex flex-wrap gap-2">
-                        <button 
-                            onClick={() => setActiveModal('complaint')}
-                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-tighter hover:bg-rose-700 transition-all shadow-md shadow-rose-100"
-                        >
-                            <AlertCircle size={14} />
-                            Raise Complaint
-                        </button>
-                        <button 
-                            onClick={() => setActiveModal('enquiry')}
-                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-tighter hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
-                        >
-                            <MessageSquare size={14} />
-                            New Enquiry
-                        </button>
-                        <button 
-                            onClick={() => setActiveModal('order')}
-                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-tighter hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100"
-                        >
-                            <ShoppingCart size={14} />
-                            Raise Order
-                        </button>
+                        {(hasFullAccess || allocatedModules.includes('Staff:Complaints')) && (
+                            <button 
+                                onClick={() => setActiveModal('complaint')}
+                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-tighter hover:bg-rose-700 transition-all shadow-md shadow-rose-100"
+                            >
+                                <AlertCircle size={14} />
+                                Raise Complaint
+                            </button>
+                        )}
+                        {(hasFullAccess || allocatedModules.includes('Staff:Enquiries')) && (
+                            <button 
+                                onClick={() => setActiveModal('enquiry')}
+                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-tighter hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                            >
+                                <MessageSquare size={14} />
+                                New Enquiry
+                            </button>
+                        )}
+                        {(hasFullAccess || allocatedModules.includes('Staff:Orders')) && (
+                            <button 
+                                onClick={() => setActiveModal('order')}
+                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-tighter hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100"
+                            >
+                                <ShoppingCart size={14} />
+                                Raise Order
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -205,17 +230,25 @@ const StaffDashboard = () => {
             <div className="px-4 md:px-0 grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                 <div className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden group">
                     <div className="flex flex-col">
-                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Ongoing</p>
-                        <p className="text-3xl md:text-4xl font-black text-gray-900 leading-none">{stats.ongoing}</p>
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">
+                            {permissions.isInstallation ? 'Installations' : 'Ongoing Tasks'}
+                        </p>
+                        <p className="text-3xl md:text-4xl font-black text-gray-900 leading-none">
+                            {permissions.isInstallation ? stats.installations : stats.ongoing}
+                        </p>
                     </div>
-                    <Clock size={40} className="absolute -right-2 -bottom-2 text-blue-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {permissions.isInstallation ? <Hammer size={40} className="absolute -right-2 -bottom-2 text-blue-50 opacity-100" /> : <Clock size={40} className="absolute -right-2 -bottom-2 text-blue-50 opacity-0 group-hover:opacity-100 transition-opacity" />}
                 </div>
                 <div className="bg-white p-5 md:p-6 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden group">
                     <div className="flex flex-col">
-                        <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">Pending</p>
-                        <p className="text-3xl md:text-4xl font-black text-gray-900 leading-none">{stats.pending}</p>
+                        <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">
+                            {permissions.isService ? 'Services' : 'Pending'}
+                        </p>
+                        <p className="text-3xl md:text-4xl font-black text-gray-900 leading-none">
+                            {permissions.isService ? stats.services : stats.pending}
+                        </p>
                     </div>
-                    <AlertCircle size={40} className="absolute -right-2 -bottom-2 text-amber-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {permissions.isService ? <Wrench size={40} className="absolute -right-2 -bottom-2 text-amber-50 opacity-100" /> : <AlertCircle size={40} className="absolute -right-2 -bottom-2 text-amber-50 opacity-0 group-hover:opacity-100 transition-opacity" />}
                 </div>
                 <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-emerald-500 to-green-600 p-5 md:p-6 rounded-3xl shadow-lg shadow-emerald-100 relative overflow-hidden group">
                     <div className="flex flex-col">
@@ -249,19 +282,31 @@ const StaffDashboard = () => {
                         ) : (
                             tasks.slice(0, 3).map((task) => (
                                 <div key={task._id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between group">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl border ${getStatusColor(task.status)}`}>
-                                            <Calendar size={18} />
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`p-2 rounded-xl border flex-shrink-0 ${getStatusColor(task.status)}`}>
+                                            {task.type === 'Installation' ? <Hammer size={18} /> : task.type === 'Service' ? <Wrench size={18} /> : <Calendar size={18} />}
                                         </div>
                                         <div className="min-w-0">
                                             <h3 className="font-bold text-gray-900 text-xs truncate max-w-[150px] md:max-w-none">{task.description}</h3>
-                                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{task.customerId?.name || 'Walk-in'}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{task.customerId?.name || 'Walk-in'}</p>
+                                                {task.designUrl && (
+                                                    <span className="flex items-center gap-1 text-[8px] font-black text-indigo-500 uppercase tracking-tighter">
+                                                        <FileText size={8} /> Design OK
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
-                                        {task.customerId?.location?.googleMapsLink && (
+                                        {permissions.isTechnician && task.type === 'Installation' && (
+                                            <div className={`p-2 rounded-lg ${task.designUrl ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-50 text-gray-300'}`}>
+                                                <HardDrive size={16} />
+                                            </div>
+                                        )}
+                                        {(task.googleMapsLink || task.customerId?.location?.googleMapsLink) && (
                                             <a 
-                                                href={task.customerId.location.googleMapsLink}
+                                                href={task.googleMapsLink || task.customerId.location.googleMapsLink}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
@@ -459,6 +504,26 @@ const StaffDashboard = () => {
                                         className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-rose-500/20 focus:bg-white outline-none font-bold transition-all text-gray-900 shadow-inner"
                                         value={formData.leadPhone}
                                         onChange={(e) => setFormData({ ...formData, leadPhone: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest ml-1 italic">Site Address</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Full address..."
+                                        className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-rose-500/20 focus:bg-white outline-none font-bold transition-all text-gray-900 shadow-inner"
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest ml-1 italic">Google Maps Link</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Paste maps link here..."
+                                        className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-rose-500/20 focus:bg-white outline-none font-bold transition-all text-gray-900 shadow-inner"
+                                        value={formData.googleMapsLink}
+                                        onChange={(e) => setFormData({ ...formData, googleMapsLink: e.target.value })}
                                     />
                                 </div>
                             </div>

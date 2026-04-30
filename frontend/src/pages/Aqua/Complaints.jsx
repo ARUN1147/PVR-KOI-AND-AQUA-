@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    MessageSquare, Plus, Search, Clock, CheckCircle2, AlertCircle, Loader2,
+    Plus, Search, Clock, CheckCircle2, AlertCircle, Loader2,
     Droplets, Wrench, HeadphonesIcon, CreditCard, HelpCircle, Trash2, Eye,
     CalendarDays, User, Tag, FileText, AlertTriangle, MapPin, ExternalLink, Sparkles
 } from 'lucide-react';
@@ -122,25 +122,7 @@ const Complaints = () => {
         }
     };
 
-    const handleWhatsAppDispatch = (task) => {
-        if (!task || !task.assignedTo) return alert('Task or Employee data missing');
-        const empPhone = typeof task.assignedTo === 'object' ? task.assignedTo.phone : null;
-        if (!empPhone) return alert('Employee phone number not found');
-        
-        const mapLink = task.customerId?.location?.googleMapsLink || 'Not provided';
-        const message = `*PVR AQUA - NEW COMPLAINT TASK*\n\n` +
-                        `*Work:* ${task.description || task.title}\n` +
-                        `*Branch:* Aqua\n` +
-                        `*Client:* ${task.customerId?.name || 'Customer'}\n` +
-                        `*Priority:* ${task.priority}\n\n` +
-                        `*📍 Map Location:* ${mapLink}`;
-        
-        const encoded = encodeURIComponent(message);
-        let phone = empPhone.replace(/\D/g, '');
-        if (phone.length === 10) phone = '91' + phone;
-        
-        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
-    };
+
 
     const filtered = useMemo(() => {
         return complaints.filter(c => {
@@ -508,12 +490,7 @@ const Complaints = () => {
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-2 shrink-0">
-                                            <button 
-                                                onClick={() => handleWhatsAppDispatch(detailComplaint.taskId)}
-                                                className="whitespace-nowrap px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/10 flex items-center gap-2 transition-all active:scale-95"
-                                            >
-                                                <MessageSquare size={14} /> Send WhatsApp
-                                            </button>
+
                                             <button 
                                                 onClick={() => navigate('/boss/tasks')}
                                                 className="whitespace-nowrap px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/10 flex items-center gap-2 transition-all active:scale-95"

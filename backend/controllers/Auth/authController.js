@@ -39,6 +39,7 @@ exports.login = async (req, res) => {
                 return res.json({
                     token,
                     role: 'BOSS',
+                    user: { name: 'MD (BOSS)', email: bossEmail, role: 'BOSS', allocatedModules: ['Staff:Portal'] },
                     message: 'Boss login successful'
                 });
             } else {
@@ -46,8 +47,15 @@ exports.login = async (req, res) => {
             }
         }
 
-        // 2. Fallback to normal users in database
-        const user = await User.findOne({ email });
+        // 2. Fallback to normal users in database (Support login by Email or Name)
+        // Ensure email lookup is case-insensitive for better UX
+        const user = await User.findOne({ 
+            $or: [
+                { email: { $regex: new RegExp(`^${email}$`, 'i') } },
+                { name: { $regex: new RegExp(`^${email}$`, 'i') } }
+            ] 
+        });
+
         if (!user || !(await user.comparePassword(password))) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }

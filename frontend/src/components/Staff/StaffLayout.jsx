@@ -111,11 +111,13 @@ const StaffLayout = () => {
         window.location.href = '/login';
     };
 
+    const allocatedModules = JSON.parse(localStorage.getItem('allocatedModules') || '[]');
+    
     const menuItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/staff/dashboard', color: '#3B82F6' },
-        { icon: ClipboardList, label: 'Tasks', path: '/staff/tasks', color: '#6366F1' },
-        { icon: CheckSquare, label: 'Attendance', path: '/staff/attendance', color: '#10B981' },
-    ];
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/staff/dashboard', color: '#3B82F6', module: 'Staff:Dashboard' },
+        { icon: ClipboardList, label: 'Tasks', path: '/staff/tasks', color: '#6366F1', module: 'Staff:Tasks' },
+        { icon: CheckSquare, label: 'Attendance', path: '/staff/attendance', color: '#10B981', module: 'Staff:Attendance' },
+    ].filter(item => allocatedModules.includes(item.module) || allocatedModules.includes('Staff:Portal'));
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans relative">

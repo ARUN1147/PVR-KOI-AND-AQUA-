@@ -121,6 +121,7 @@ const ModuleAllocation = () => {
 
     const aquaModules = ['Dashboard', 'Attendance', 'Employees', 'Customers', 'Inventory', 'Complaints', 'Orders', 'Tasks', 'Services', 'Invoices'];
     const koiModules = ['Dashboard', 'Attendance', 'Employees', 'Enquiries', 'Sales & Billing', 'Payments', 'Inventory', 'Customers', 'Invoices'];
+    const staffModules = ['Dashboard', 'Tasks', 'Attendance', 'Enquiries', 'Orders', 'Complaints', 'Technician', 'Installation', 'Service'];
 
     return (
         <div className="py-6 min-h-screen bg-[#F0F7FF]">
@@ -367,6 +368,40 @@ const ModuleAllocation = () => {
                                             </div>
                                         </>
                                     )}
+                                </div>
+
+                                {/* Shared / Staff Modules Section */}
+                                <div className="p-8 border-t-2 border-gray-50 bg-slate-50/30">
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 pb-4 border-b-2 border-indigo-500/10">
+                                            <div className="p-2.5 bg-indigo-50 rounded-2xl">
+                                                <Users className="text-indigo-500" size={24} />
+                                            </div>
+                                            <h3 className="text-sm font-black text-indigo-500 uppercase tracking-[0.3em]">Employee Operations Hub (Staff Portal)</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            {staffModules.map(mod => {
+                                                const modId = `Staff:${mod}`;
+                                                const isChecked = allocatedModules.includes(modId);
+                                                return (
+                                                    <label key={modId} className={`group flex items-center justify-between p-5 rounded-3xl cursor-pointer transition-all border-2 ${isChecked ? 'bg-indigo-50/50 border-indigo-500/20 shadow-sm' : 'bg-white border-transparent hover:bg-gray-100'}`}>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all ${isChecked ? 'bg-indigo-500 text-white' : 'bg-white border-2 border-gray-200'}`}>
+                                                                {isChecked && <Check size={16} strokeWidth={4} />}
+                                                            </div>
+                                                            <span className={`text-[11px] font-black uppercase tracking-wider transition-colors ${isChecked ? 'text-indigo-700' : 'text-gray-500'}`}>{mod}</span>
+                                                        </div>
+                                                        <input
+                                                            type="checkbox"
+                                                            className="hidden"
+                                                            checked={isChecked}
+                                                            onChange={() => handleToggleModule(modId)}
+                                                        />
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (

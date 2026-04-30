@@ -4,6 +4,8 @@ const enquirySchema = new mongoose.Schema({
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     leadName: String,
     leadPhone: String,
+    address: String,
+    googleMapsLink: String,
     details: { type: String, required: true },
     status: { type: String, enum: ['Pending', 'Quotation Sent', 'Converted', 'Closed'], default: 'Pending' },
     followUpDate: Date,

@@ -2,15 +2,19 @@ const Order = require('../../models/Aqua/Order');
 const Enquiry = require('../../models/Aqua/Enquiry');
 const Product = require('../../models/Aqua/Product');
 const Task = require('../../models/Staff/Task');
+const Customer = require('../../models/Aqua/Customer');
+const User = require('../../models/Boss/User');
 
 exports.createEnquiry = async (req, res) => {
     try {
-        const { customerId, details, leadName, leadPhone, status } = req.body;
+        const { customerId, details, leadName, leadPhone, address, googleMapsLink, status } = req.body;
         const enquiry = await Enquiry.create({ 
             customerId, 
             details, 
             leadName, 
             leadPhone, 
+            address,
+            googleMapsLink,
             status 
         });
         res.status(201).json(enquiry);
@@ -37,13 +41,15 @@ exports.createOrderFromQuotation = async (req, res) => {
             const enquiry = await Enquiry.findById(enquiryId);
             if (enquiry && enquiry.leadName && enquiry.leadPhone) {
                 // Create the customer first
-                const Customer = require('../../models/Aqua/Customer');
                 let customer = await Customer.findOne({ phone: enquiry.leadPhone });
                 if (!customer) {
                     customer = await Customer.create({
                         name: enquiry.leadName,
                         phone: enquiry.leadPhone,
-                        address: 'Field Conversion' // Default address
+                        address: enquiry.address || 'Field Conversion',
+                        location: {
+                            googleMapsLink: enquiry.googleMapsLink || ''
+                        }
                     });
                 }
                 customerId = customer._id;
@@ -78,9 +84,11 @@ exports.createOrderFromQuotation = async (req, res) => {
 
         // Automated Task Creation for Completed Orders
         if (order.status === 'Completed') {
+            const customer = await Customer.findById(order.customerId);
             await Task.create({
                 type: 'Installation',
                 customerId: order.customerId,
+                googleMapsLink: customer?.location?.googleMapsLink,
                 description: `Installation Task for Order #${order._id.toString().slice(-6)} - Auto Generated`,
                 priority: 'Medium',
                 status: 'Pending'
@@ -123,16 +131,43 @@ exports.updatePayment = async (req, res) => {
         const { id } = req.params;
         const { amount } = req.body;
         const order = await Order.findById(id);
+        const wasAdvancePaid = order.isAdvancePaid;
         order.paidAmount = Number(amount);
         
-        if (order.paidAmount >= order.totalAmount) {
-            order.status = 'Ready for Dispatch';
-            order.isAdvancePaid = true; // Fully paid is also advance paid
-        } else if (order.paidAmount >= order.totalAmount * 0.3) { // 30% advance
+        if (order.paidAmount >= order.totalAmount * 0.3) { 
             order.isAdvancePaid = true;
-            if (order.status === 'Quotation') order.status = 'In Production';
+            // If it's a new order (Quotation), move to Design phase regardless of 30% or 100% payment
+            if (order.status === 'Quotation') {
+                order.status = 'AutoCAD Design';
+            }
         }
         
+        // Only move to 'Ready for Dispatch' if it's already past the 'In Production' phase and fully paid
+        if (order.paidAmount >= order.totalAmount && order.status === 'In Production') {
+            order.status = 'Ready for Dispatch';
+        }
+        
+        // Trigger Technician Task if payment is >= 30% and task doesn't exist yet
+        if (order.paidAmount >= order.totalAmount * 0.3) {
+            const existingTask = await Task.findOne({ orderId: order._id, type: 'Installation' });
+            
+            if (!existingTask) {
+                const customer = await Customer.findById(order.customerId);
+                
+                const newTask = await Task.create({
+                    type: 'Installation',
+                    customerId: order.customerId,
+                    orderId: order._id,
+                    assignedTo: null, // Keep unassigned for manual allocation by manager
+                    description: `Design Phase: Upload AutoCAD PDF for Order #${order._id.toString().slice(-6)}`,
+                    priority: 'High',
+                    status: 'Pending',
+                    googleMapsLink: customer?.location?.googleMapsLink
+                });
+                console.log('DEBUG: Task Created (Unassigned) -> ID:', newTask._id, 'for Order:', order._id);
+            }
+        }
+
         await order.save();
         res.json(order);
     } catch (err) {
@@ -159,9 +194,11 @@ exports.updateOrderStatus = async (req, res) => {
 
         // Automated Task Creation for Completed status
         if (status === 'Completed' && order.status !== 'Completed') {
+            const customer = await Customer.findById(order.customerId);
             await Task.create({
                 type: 'Installation',
                 customerId: order.customerId,
+                googleMapsLink: customer?.location?.googleMapsLink,
                 description: `Installation Task for Order #${order._id.toString().slice(-6)} - Auto Generated`,
                 priority: 'Medium',
                 status: 'Pending'
@@ -210,7 +247,10 @@ exports.convertEnquiryToCustomer = async (req, res) => {
             customer = await Customer.create({
                 name: enquiry.leadName,
                 phone: enquiry.leadPhone,
-                address: 'Converted from Enquiry'
+                address: enquiry.address || 'Converted from Enquiry',
+                location: {
+                    googleMapsLink: enquiry.googleMapsLink || ''
+                }
             });
         }
 

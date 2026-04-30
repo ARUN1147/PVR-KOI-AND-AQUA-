@@ -409,8 +409,8 @@ const Orders = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {[
                             { label: 'Total Sales', value: orders.length, color: 'blue', icon: ClipboardList },
+                            { label: 'In Design', value: orders.filter(o => ['AutoCAD Design', 'Design Verification'].includes(o.status)).length, color: 'indigo', icon: Layers },
                             { label: 'In Production', value: orders.filter(o => o.status === 'In Production').length, color: 'yellow', icon: Hammer },
-                            { label: 'Dispatched', value: orders.filter(o => o.status === 'Dispatched').length, color: 'purple', icon: Truck },
                             { label: 'Revenue Pending', value: `₹${(orders.reduce((acc, o) => acc + (o.totalAmount - o.paidAmount), 0) / 1000).toFixed(1)}k`, color: 'orange', icon: Banknote }
                         ].map((stat, i) => (
                             <div key={i} className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center text-center group hover:border-primary-100 transition-all">
@@ -457,6 +457,8 @@ const Orders = () => {
                                         o._id.includes(searchTerm)
                                     ).map(order => {
                                         const hasInvoice = invoices.some(inv => inv.order?._id === order._id || inv.order === order._id);
+                                        const hasDesign = order.autoCADFiles?.length > 0;
+                                        
                                         return (
                                             <tr key={order._id} className="hover:bg-primary-50/30 transition-colors group">
                                                 <td className="px-8 py-6">
@@ -468,17 +470,31 @@ const Orders = () => {
                                                     <p className="text-[9px] text-gray-400 font-medium italic">{order.customerId?.phone}</p>
                                                 </td>
                                                 <td className="px-8 py-6">
-                                                    <select 
-                                                        className={`bg-white border-2 border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-xl px-4 py-2 outline-none cursor-pointer focus:border-primary-600 transition-all shadow-sm ${order.status === 'Completed' ? 'text-emerald-600' : 'text-primary-600'}`}
-                                                        value={order.status}
-                                                        onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
-                                                    >
-                                                        <option value="Quotation">Quotation</option>
-                                                        <option value="In Production">In Production</option>
-                                                        <option value="Ready for Dispatch">Ready for Dispatch</option>
-                                                        <option value="Dispatched">Dispatched</option>
-                                                        <option value="Completed">Completed</option>
-                                                    </select>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <select 
+                                                            className={`bg-white border-2 border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-xl px-4 py-2 outline-none cursor-pointer focus:border-primary-600 transition-all shadow-sm ${order.status === 'Completed' ? 'text-emerald-600' : order.status === 'Design Verification' ? 'text-orange-600 border-orange-100' : 'text-primary-600'}`}
+                                                            value={order.status}
+                                                            onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
+                                                        >
+                                                            <option value="Quotation">Quotation</option>
+                                                            <option value="AutoCAD Design">AutoCAD Design</option>
+                                                            <option value="Design Verification">Design Verification</option>
+                                                            <option value="In Production">In Production</option>
+                                                            <option value="Ready for Dispatch">Ready for Dispatch</option>
+                                                            <option value="Dispatched">Dispatched</option>
+                                                            <option value="Completed">Completed</option>
+                                                        </select>
+                                                        {hasDesign && (
+                                                            <a 
+                                                                href={order.autoCADFiles[order.autoCADFiles.length - 1]} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-1 text-[8px] font-black text-indigo-500 hover:text-indigo-700 transition-colors uppercase tracking-widest px-1"
+                                                            >
+                                                                <Layers size={10} /> View Design PDF
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-8 py-6">
                                                     <div className="flex flex-col">

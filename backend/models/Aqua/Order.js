@@ -13,7 +13,7 @@ const orderSchema = new mongoose.Schema({
     paidAmount: { type: Number, default: 0 },
     status: {
         type: String,
-        enum: ['Quotation', 'In Production', 'Ready for Dispatch', 'Dispatched', 'Completed'],
+        enum: ['Quotation', 'AutoCAD Design', 'Design Verification', 'In Production', 'Ready for Dispatch', 'Dispatched', 'Completed'],
         default: 'Quotation'
     },
     quotationFile: String, // URL to design/quotation

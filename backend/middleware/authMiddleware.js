@@ -31,8 +31,7 @@ exports.authorize = (...roles) => {
             normalizedUserRole === 'BOSS' || 
             normalizedUserRole === 'MANAGER' || 
             normalizedUserRole === 'GENERALMANAGER' || 
-            normalizedUserRole === 'GENERAL_MANAGER' ||
-            normalizedAllowedRoles.includes(normalizedUserRole)
+            normalizedAllowedRoles.some(r => normalizedUserRole === r || (r.length >= 3 && normalizedUserRole.startsWith(r)))
         ) {
             return next();
         }

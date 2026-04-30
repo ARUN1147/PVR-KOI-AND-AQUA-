@@ -20,15 +20,22 @@ const syncServiceToTask = async (service) => {
         if (task) {
             task.dueDate = service.serviceExpiryDate;
             task.description = description;
+            // Also update link in case it was missing
+            if (!task.googleMapsLink) {
+                const customer = await Customer.findById(service.customerId);
+                if (customer?.location?.googleMapsLink) task.googleMapsLink = customer.location.googleMapsLink;
+            }
             await task.save();
         } else {
+            const customer = await Customer.findById(service.customerId);
             await Task.create({
                 customerId: service.customerId,
                 type: 'Service',
                 dueDate: service.serviceExpiryDate,
                 description: description,
                 priority: 'Medium',
-                status: 'Travelling' // Default starting state
+                status: 'Travelling', // Default starting state
+                googleMapsLink: customer?.location?.googleMapsLink
             });
         }
     } catch (err) {

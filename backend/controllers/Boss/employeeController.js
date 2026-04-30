@@ -5,7 +5,20 @@ exports.getEmployees = async (req, res) => {
         const branch = req.query.branch || 'Aqua';
         const query = branch === 'All' ? {} : { branch };
         const employees = await Employee.find(query).sort({ createdAt: -1 });
-        res.json(employees);
+        
+        // Link with User data to get allocatedModules
+        const User = require('../../models/Boss/User');
+        const users = await User.find({ employeeId: { $in: employees.map(e => e._id) } });
+        
+        const enrichedEmployees = employees.map(emp => {
+            const user = users.find(u => u.employeeId?.toString() === emp._id.toString());
+            return {
+                ...emp.toObject(),
+                allocatedModules: user ? user.allocatedModules : []
+            };
+        });
+
+        res.json(enrichedEmployees);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import {
     CheckSquare, Plus, Clock, MapPin, User, AlertTriangle,
     Loader2, Calendar as CalendarIcon, Flag, Users, Filter, Wrench, Zap, Edit,
-    MessageSquare, ExternalLink, ChevronDown, X
+    ExternalLink, ChevronDown, X
 } from 'lucide-react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -38,7 +38,8 @@ const emptyForm = {
     assignedTo: '',
     description: '',
     priority: 'Medium',
-    dueDate: ''
+    dueDate: '',
+    googleMapsLink: ''
 };
 
 const Tasks = () => {
@@ -113,29 +114,12 @@ const Tasks = () => {
             assignedTo: task.assignedTo?._id || '',
             description: task.description || '',
             priority: task.priority || 'Medium',
-            dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''
+            dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+            googleMapsLink: task.googleMapsLink || ''
         });
         setIsModalOpen(true);
     };
-    const handleWhatsAppDispatch = (task) => {
-        const empPhone = task.assignedTo?.phone;
-        if (!empPhone) return alert('Employee phone number not found');
-        
-        const mapLink = task.customerId?.location?.googleMapsLink || 'Not provided';
-        const message = `*PVR AQUA - NEW TASK*\n\n` +
-                        `*Work:* ${task.description}\n` +
-                        `*Branch:* Aqua\n` +
-                        `*Client:* ${task.customerId?.name || 'Reference'}\n` +
-                        `*Priority:* ${task.priority}\n\n` +
-                        `*📍 Map Location:* ${mapLink}`;
-        
-        const encoded = encodeURIComponent(message);
-        // Normalize phone: remove non-digits, add 91 if 10 digits
-        let phone = empPhone.replace(/\D/g, '');
-        if (phone.length === 10) phone = '91' + phone;
-        
-        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
-    };
+
 
 
 
@@ -428,13 +412,18 @@ const Tasks = () => {
                                                 {STATUS_CONFIG[task.status]?.label || task.status}
                                             </span>
                                             <div className="flex items-center gap-1">
-                                                <button 
-                                                    onClick={() => handleWhatsAppDispatch(task)}
-                                                    className="p-3 text-emerald-500 hover:bg-emerald-50 rounded-2xl transition-all border border-transparent hover:border-emerald-100"
-                                                    title="Dispatch via WhatsApp"
-                                                >
-                                                    <MessageSquare size={18} />
-                                                </button>
+                                                {(task.googleMapsLink || task.customerId?.location?.googleMapsLink) && (
+                                                    <a 
+                                                        href={task.googleMapsLink || task.customerId?.location?.googleMapsLink}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-3 text-blue-500 hover:bg-blue-50 rounded-2xl transition-all border border-transparent hover:border-blue-100"
+                                                        title="Open Map Location"
+                                                    >
+                                                        <MapPin size={18} />
+                                                    </a>
+                                                )}
+
                                                 <button 
                                                     onClick={() => handleEdit(task)}
                                                     className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all border border-transparent hover:border-indigo-100"
@@ -480,21 +469,47 @@ const Tasks = () => {
                                         <option value="">Select Employee...</option>
                                         {employees
                                             .filter(e => e.status === 'Active')
-                                            .map(emp => (
-                                                <option key={emp._id} value={emp._id}>{emp.name} · {emp.designation}</option>
-                                            ))}
+                                            .map(emp => {
+                                                const roles = [];
+                                                if (emp.allocatedModules?.includes('Staff:Technician')) roles.push('TECH');
+                                                if (emp.allocatedModules?.includes('Staff:Installation')) roles.push('INSTALL');
+                                                if (emp.allocatedModules?.includes('Staff:Service')) roles.push('SERVICE');
+                                                const roleStr = roles.length > 0 ? ` [${roles.join('|')}]` : '';
+                                                
+                                                return (
+                                                    <option key={emp._id} value={emp._id}>
+                                                        {emp.name}{roleStr} · {emp.designation}
+                                                    </option>
+                                                );
+                                            })}
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-gray-600 ml-0.5">Customer (Optional)</label>
-                                    <select
-                                        className="input-field text-sm"
-                                        value={formData.customerId}
-                                        onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                                    >
-                                        <option value="">No specific customer</option>
-                                        {customers.map(c => <option key={c._id} value={c._id}>{c.name} · {c.phone}</option>)}
-                                    </select>
+                                    <label className="text-xs font-semibold text-gray-600 ml-0.5">Google Maps Link (Auto-filled from Customer)</label>
+                                    <div className="relative">
+                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                                        <input
+                                            type="text"
+                                            placeholder="Paste Google Maps URL here..."
+                                            className="input-field text-sm pl-10"
+                                            value={formData.googleMapsLink}
+                                            onChange={(e) => setFormData({ ...formData, googleMapsLink: e.target.value })}
+                                        />
+                                    </div>
+                                    {!formData.googleMapsLink && formData.customerId && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                const cust = customers.find(c => c._id === formData.customerId);
+                                                if (cust?.location?.googleMapsLink) {
+                                                    setFormData({ ...formData, googleMapsLink: cust.location.googleMapsLink });
+                                                }
+                                            }}
+                                            className="text-[10px] text-blue-600 font-bold mt-1 hover:underline"
+                                        >
+                                            Fetch link from customer record
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

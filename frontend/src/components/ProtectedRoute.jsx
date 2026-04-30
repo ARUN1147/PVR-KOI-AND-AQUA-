@@ -12,7 +12,7 @@ const ProtectedRoute = ({
         return <Navigate to={fallbackPath} replace />;
     }
 
-    if (allowedRoles && !allowedRoles.includes(role)) {
+    if (allowedRoles && !allowedRoles.some(r => role === r || (r.length > 2 && role.startsWith(r)))) {
         // Instead of redirecting to login (which might redirect back here),
         // we show a simple "Access Denied" message or a button to go to a safe place.
         return (

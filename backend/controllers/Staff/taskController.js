@@ -5,7 +5,17 @@ const Customer = require('../../models/Aqua/Customer');
 
 exports.createTask = async (req, res) => {
     try {
-        const task = await Task.create(req.body);
+        const taskData = { ...req.body };
+        
+        // Auto-populate Google Maps Link if missing but customerId exists
+        if (!taskData.googleMapsLink && taskData.customerId) {
+            const customer = await Customer.findById(taskData.customerId);
+            if (customer?.location?.googleMapsLink) {
+                taskData.googleMapsLink = customer.location.googleMapsLink;
+            }
+        }
+
+        const task = await Task.create(taskData);
         res.status(201).json(task);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -25,10 +35,22 @@ exports.getTasks = async (req, res) => {
 exports.getAssignedTasks = async (req, res) => {
     try {
         const { employeeId } = req.user;
+        const User = require('../../models/Boss/User');
+        const userDoc = await User.findById(req.user.id);
+        console.log(`DEBUG: User ${userDoc?.name} has modules:`, userDoc?.allocatedModules);
+        
+        const systemTechnicians = await User.find({ allocatedModules: 'Staff:Technician' });
+        console.log(`DEBUG: System-wide Technicians: ${systemTechnicians.length}`);
+        systemTechnicians.forEach(t => console.log(`  - ${t.name} (EMP: ${t.employeeId})`));
+        
+        console.log('DEBUG: Fetching tasks for employeeId:', employeeId);
         if (!employeeId) {
             return res.status(400).json({ message: 'User is not linked to an employee record' });
         }
         const tasks = await Task.find({ assignedTo: employeeId }).populate('customerId').populate('assignedTo');
+        const unassigned = await Task.countDocuments({ assignedTo: null });
+        console.log(`DEBUG: Found ${tasks.length} tasks for ${employeeId} | Global Unassigned: ${unassigned}`);
+        tasks.forEach(t => console.log(`  - TASK: ${t.description} | TYPE: ${t.type} | STATUS: ${t.status}`));
         res.json(tasks);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -79,6 +101,22 @@ exports.updateTaskStatus = async (req, res) => {
             }
         }
 
+        // AUTO ORDER TRANSITION: If this was a design task, push order to Verification
+        if ((status === 'Completed' || status === 'Work completed') && task.orderId) {
+            const Order = require('../../models/Aqua/Order');
+            const order = await Order.findById(task.orderId);
+            if (order && order.status === 'AutoCAD Design') {
+                order.status = 'Design Verification';
+                
+                // Sync design file to order record if available
+                if (task.designUrl && !order.autoCADFiles.includes(task.designUrl)) {
+                    order.autoCADFiles.push(task.designUrl);
+                }
+                
+                await order.save();
+            }
+        }
+
         await task.save();
         res.json(task);
     } catch (err) {
@@ -89,7 +127,17 @@ exports.updateTaskStatus = async (req, res) => {
 exports.updateTask = async (req, res) => {
     try {
         const { id } = req.params;
-        const task = await Task.findByIdAndUpdate(id, req.body, { new: true })
+        const updateData = { ...req.body };
+
+        // If customer is changing, refresh the link
+        if (updateData.customerId) {
+            const customer = await Customer.findById(updateData.customerId);
+            if (customer?.location?.googleMapsLink) {
+                updateData.googleMapsLink = customer.location.googleMapsLink;
+            }
+        }
+
+        const task = await Task.findByIdAndUpdate(id, updateData, { new: true })
             .populate('customerId')
             .populate('assignedTo');
         res.json(task);

@@ -87,7 +87,7 @@ function App() {
 
         if (r.includes('KOI')) return "/koi/dashboard";
         // Support dynamic staff roles
-        if (r.includes('STAFF') || r.includes('EMPLOYEE') || r === 'EMP') return "/staff/dashboard";
+        if (r.includes('STAFF') || r.includes('EMPLOYEE') || r.startsWith('EMP')) return "/staff/dashboard";
         if (r.includes('AQUA') || r === 'ADMIN') return "/aqua";
         return "/aqua";
     };

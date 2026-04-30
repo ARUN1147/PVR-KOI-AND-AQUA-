@@ -99,7 +99,8 @@ exports.convertToTask = async (req, res) => {
             customerId: complaint.customerId?._id,
             priority: complaint.priority || 'Medium',
             status: 'In Progress',
-            assignedTo: finalAssignedTo
+            assignedTo: finalAssignedTo,
+            googleMapsLink: complaint.customerId?.location?.googleMapsLink
         });
 
         complaint.taskId = task._id;

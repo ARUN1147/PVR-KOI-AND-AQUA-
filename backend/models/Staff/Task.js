@@ -8,6 +8,7 @@ const taskSchema = new mongoose.Schema({
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: false },
     priority: { type: String, enum: ['Low', 'Medium', 'High', 'Urgent'], default: 'Medium' },
     dueDate: { type: Date },
+    googleMapsLink: String,
     status: {
         type: String,
         enum: ['Pending', 'Travelling', 'Arrived', 'In Progress', 'Work completed', 'Completed', 'Returned', 'Returned home'],
@@ -20,7 +21,9 @@ const taskSchema = new mongoose.Schema({
     materialsUsed: [{
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
         quantity: Number
-    }]
+    }],
+    designUrl: { type: String, required: false },
+    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Task', taskSchema);

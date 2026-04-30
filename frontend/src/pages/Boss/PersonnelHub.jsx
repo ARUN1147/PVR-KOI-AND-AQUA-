@@ -47,7 +47,8 @@ const PersonnelHub = () => {
     const availableModules = [
         'Aqua:Dashboard', 'Aqua:Attendance', 'Aqua:Employees', 'Aqua:Customers', 'Aqua:Inventory', 'Aqua:Complaints', 'Aqua:Orders', 'Aqua:Tasks', 'Aqua:Services', 'Aqua:Invoices',
         'Koi:Dashboard', 'Koi:Attendance', 'Koi:Employees', 'Koi:Enquiries', 'Koi:Sales & Billing', 'Koi:Payments', 'Koi:Inventory', 'Koi:Customers', 'Koi:Invoices',
-        'Staff:Portal'
+        'Staff:Dashboard', 'Staff:Tasks', 'Staff:Attendance', 'Staff:Enquiries', 'Staff:Orders', 'Staff:Complaints',
+        'Staff:Technician', 'Staff:Installation', 'Staff:Service'
     ];
 
     useEffect(() => {
@@ -454,18 +455,15 @@ const PersonnelHub = () => {
                                                     <Layout size={16} className="text-indigo-500" />
                                                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Employee Operations Matrix</span>
                                                 </div>
-                                                <div className="grid grid-cols-1 gap-2">
+                                                <div className="grid grid-cols-2 gap-2">
                                                     {availableModules.filter(m => m.startsWith('Staff:')).map(module => (
                                                         <label key={module} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${currentRole.modules.includes(module) ? 'bg-white border-indigo-400 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50'}`}>
                                                             <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${currentRole.modules.includes(module) ? 'bg-indigo-500 text-white' : 'bg-gray-200'}`}>
                                                                  {currentRole.modules.includes(module) && <Check size={12} strokeWidth={4} />}
                                                             </div>
-                                                            <div className="flex flex-col">
-                                                                <span className={`text-[10px] font-black ${currentRole.modules.includes(module) ? 'text-indigo-900' : 'text-gray-400'}`}>
-                                                                    DEDICATED STAFF PORTAL
-                                                                </span>
-                                                                <p className="text-[9px] text-gray-400 font-medium italic">Enables the high-fidelity field officer dashboard</p>
-                                                            </div>
+                                                            <span className={`text-[10px] font-bold ${currentRole.modules.includes(module) ? 'text-indigo-900' : 'text-gray-400'}`}>
+                                                                {module.split(':')[1]}
+                                                            </span>
                                                             <input type="checkbox" className="hidden" checked={currentRole.modules.includes(module)} onChange={() => toggleModule(module)} />
                                                         </label>
                                                     ))}
