@@ -80,14 +80,14 @@ const Login = ({ onLogin }) => {
 
                 {/* Right Section - Form */}
                 <div className="w-full md:w-[55%] p-10 md:p-14 flex flex-col justify-center bg-white relative">
-                    {/* Top Bar with Logo */}
-                    <div className="absolute top-8 right-10 flex items-center gap-2">
-                        <img src="/PVR.png" alt="PVR Logo" className="h-8 w-auto object-contain" />
-                    </div>
-
                     <div className="max-w-[420px] w-full mx-auto">
-                        <h1 className="text-[#2D3748] text-3xl font-bold mb-2">Sign In</h1>
-                        <p className="text-[#A0AEC0] text-sm mb-10">Enter your credentials to continue.</p>
+                        <div className="flex justify-between items-center mb-10">
+                            <div>
+                                <h1 className="text-[#2D3748] text-3xl font-bold mb-2">Sign In</h1>
+                                <p className="text-[#A0AEC0] text-sm">Enter your credentials to continue.</p>
+                            </div>
+                            <img src="/PVR.png" alt="PVR Logo" className="h-16 md:h-20 w-auto object-contain" />
+                        </div>
 
                         <form onSubmit={handleLogin} className="space-y-6">
                             {/* User name or Email */}
