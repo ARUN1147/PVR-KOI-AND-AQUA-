@@ -86,6 +86,7 @@ const SidebarIcon = ({ icon: Icon, path, label, active, onClick, expanded, color
 
 const KoiLayout = ({ role: initialRole, allocatedModules: initialModules }) => {
     const [isHovered, setIsHovered] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
     const role = (initialRole || localStorage.getItem('role') || '').toUpperCase();
@@ -125,6 +126,10 @@ const KoiLayout = ({ role: initialRole, allocatedModules: initialModules }) => {
 
 
     const handleLogout = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    const confirmLogout = () => {
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('role');
         window.location.reload();
@@ -248,8 +253,11 @@ const KoiLayout = ({ role: initialRole, allocatedModules: initialModules }) => {
 
                 {/* User Profile Section */}
                 <div className="w-full px-4 pt-4 mt-auto border-t border-[#F8FAFC]">
-                    <div className={`flex items-center ${(isHovered || isMobileMenuOpen) ? 'px-2 gap-3' : 'justify-center'} h-16 rounded-xl hover:bg-[#F8FAFC] transition-colors cursor-pointer relative group`}>
-                        <div className="w-10 h-10 rounded-full bg-[#f97316] flex items-center justify-center text-white text-sm font-bold shadow-sm shrink-0 border-2 border-white">
+                    <div 
+                        onClick={handleLogout}
+                        className={`flex items-center ${(isHovered || isMobileMenuOpen) ? 'px-2 gap-3' : 'justify-center'} h-16 rounded-xl hover:bg-rose-50 transition-all cursor-pointer relative group`}
+                    >
+                        <div className="w-10 h-10 rounded-full bg-[#f97316] flex items-center justify-center text-white text-sm font-bold shadow-sm shrink-0 border-2 border-white group-hover:bg-rose-500 transition-colors">
                             {role?.charAt(0) || 'K'}
                         </div>
                         <AnimatePresence>
@@ -262,16 +270,16 @@ const KoiLayout = ({ role: initialRole, allocatedModules: initialModules }) => {
                                     className="flex-1 flex items-center justify-between overflow-hidden"
                                 >
                                     <div className="flex flex-col min-w-0">
-                                        <p className="text-[#0F172A] font-bold text-[13px] leading-tight truncate">
+                                        <p className="text-[#0F172A] font-bold text-[13px] leading-tight truncate group-hover:text-rose-600">
                                             {role?.replace('_', ' ') || 'Koi Officer'}
                                         </p>
                                         <p className="text-[#94A3B8] text-[11px] truncate">
                                             {role?.toLowerCase()}@pvr.systems
                                         </p>
                                     </div>
-                                    <button onClick={handleLogout} title="Logout">
-                                        <LogOut size={16} className="text-[#94A3B8] hover:text-[#F43F5E] transition-colors" />
-                                    </button>
+                                    <div title="Logout">
+                                        <LogOut size={16} className="text-[#94A3B8] group-hover:text-rose-500 transition-colors" />
+                                    </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -302,12 +310,15 @@ const KoiLayout = ({ role: initialRole, allocatedModules: initialModules }) => {
                         </div>
 
                         {/* Profile Info */}
-                        <div className="flex items-center gap-2 sm:gap-4 pl-4 border-l border-gray-100 ml-auto">
+                        <div 
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 sm:gap-4 pl-4 border-l border-gray-100 ml-auto cursor-pointer group/header"
+                        >
                             <div className="flex flex-col items-end hidden xs:flex">
-                                <p className="text-xs lg:text-sm font-bold text-gray-900 leading-tight whitespace-nowrap">{role?.replace('_', ' ') || 'Koi Officer'}</p>
+                                <p className="text-xs lg:text-sm font-bold text-gray-900 leading-tight whitespace-nowrap group-hover/header:text-[#F43F5E] transition-colors">{role?.replace('_', ' ') || 'Koi Officer'}</p>
                                 <p className="text-[9px] lg:text-[10px] text-gray-400 font-bold uppercase tracking-widest">Koi Centre</p>
                             </div>
-                            <div className="w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-gradient-to-tr from-orange-500 to-orange-700 flex items-center justify-center text-white text-xs lg:text-sm font-bold shadow-md shrink-0 border-2 border-white">
+                            <div className="w-9 h-9 lg:w-11 lg:h-11 rounded-full bg-gradient-to-tr from-orange-500 to-orange-700 flex items-center justify-center text-white text-xs lg:text-sm font-bold shadow-md shrink-0 border-2 border-white transition-all group-hover/header:from-[#F43F5E] group-hover/header:to-rose-600 group-hover/header:scale-110">
                                 {role?.charAt(0) || 'K'}
                             </div>
                         </div>
@@ -321,6 +332,51 @@ const KoiLayout = ({ role: initialRole, allocatedModules: initialModules }) => {
                 </div>
             </div>
 
+            {/* Logout Confirmation Modal */}
+            <AnimatePresence>
+                {showLogoutConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
+                        onClick={() => setShowLogoutConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-white/20 text-center relative overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Decorative Background Element */}
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#F43F5E] to-transparent opacity-50" />
+                            
+                            <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-rose-500">
+                                <LogOut size={32} />
+                            </div>
+
+                            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Confirm Logout</h3>
+                            <p className="text-gray-500 text-sm mb-8 font-medium">Are you sure you want to log out of your session?</p>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    className="py-3.5 px-6 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-50 transition-all active:scale-95 border border-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmLogout}
+                                    className="py-3.5 px-6 rounded-xl bg-[#F43F5E] text-white font-bold text-sm hover:bg-rose-600 shadow-lg shadow-rose-200 transition-all active:scale-95"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

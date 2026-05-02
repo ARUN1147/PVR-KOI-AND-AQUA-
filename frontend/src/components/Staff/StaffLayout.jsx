@@ -77,6 +77,7 @@ const SidebarIcon = ({ icon: Icon, path, label, active, onClick, expanded, color
 
 const StaffLayout = () => {
     const [isHovered, setIsHovered] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [pendingTaskCount, setPendingTaskCount] = useState(0);
     const location = useLocation();
@@ -107,6 +108,10 @@ const StaffLayout = () => {
     }, []);
 
     const handleLogout = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    const confirmLogout = () => {
         localStorage.clear();
         window.location.href = '/login';
     };
@@ -168,8 +173,11 @@ const StaffLayout = () => {
                 </div>
 
                 <div className="w-full px-4 pt-4 border-t border-[#F8FAFC]">
-                    <button onClick={handleLogout} className="flex items-center gap-3 w-full h-12 px-5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors font-bold text-sm">
-                        <LogOut size={20} />
+                    <button 
+                        onClick={handleLogout} 
+                        className="flex items-center gap-3 w-full h-12 px-5 text-rose-500 hover:bg-rose-50 rounded-xl transition-all font-bold text-sm active:scale-95 group"
+                    >
+                        <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
                         {(isHovered || isMobileMenuOpen) && <span>Logout</span>}
                     </button>
                 </div>
@@ -208,8 +216,13 @@ const StaffLayout = () => {
                                 </span>
                             )}
                         </Link>
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold border-2 border-white shadow-sm">
-                            {role.charAt(0)}
+                        <div 
+                            onClick={handleLogout}
+                            className="flex items-center gap-4 cursor-pointer group/header"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold border-2 border-white shadow-sm transition-all group-hover/header:bg-[#F43F5E] group-hover/header:scale-110">
+                                {role.charAt(0)}
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -218,6 +231,51 @@ const StaffLayout = () => {
                     <Outlet />
                 </main>
             </div>
+            {/* Logout Confirmation Modal */}
+            <AnimatePresence>
+                {showLogoutConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
+                        onClick={() => setShowLogoutConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-white/20 text-center relative overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Decorative Background Element */}
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#F43F5E] to-transparent opacity-50" />
+                            
+                            <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-rose-500">
+                                <LogOut size={32} />
+                            </div>
+
+                            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Confirm Logout</h3>
+                            <p className="text-gray-500 text-sm mb-8 font-medium">Are you sure you want to log out of your session?</p>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    className="py-3.5 px-6 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-50 transition-all active:scale-95 border border-gray-100"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmLogout}
+                                    className="py-3.5 px-6 rounded-xl bg-[#F43F5E] text-white font-bold text-sm hover:bg-rose-600 shadow-lg shadow-rose-200 transition-all active:scale-95"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

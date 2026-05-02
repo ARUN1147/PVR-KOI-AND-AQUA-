@@ -185,7 +185,7 @@ const RoleManagementModal = ({ isOpen, onClose, onRolesUpdated }) => {
                         </div>
                         <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
                             {loading ? (
-                                <div className="p-4 text-center text-gray-400 italic">Loading system roles...</div>
+                                <div className="p-4 text-center text-gray-400">Loading system roles...</div>
                             ) : roles.map(role => (
                                 <div key={role._id} className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-indigo-100 transition-all group">
                                     <div className="flex justify-between items-start">

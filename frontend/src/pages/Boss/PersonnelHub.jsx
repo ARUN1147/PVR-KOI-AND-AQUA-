@@ -330,9 +330,9 @@ const PersonnelHub = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
                                         {loading ? (
-                                            <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-300 italic">Syncing personnel data...</td></tr>
+                                            <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-300">Syncing personnel data...</td></tr>
                                         ) : filteredUsers.length === 0 ? (
-                                            <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-300 italic">No personnel found matching your criteria</td></tr>
+                                            <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-300">No personnel found matching your criteria</td></tr>
                                         ) : filteredUsers.map(user => (
                                             <tr key={user._id} className="hover:bg-gray-50/50 transition-colors group">
                                                 <td className="px-8 py-6">

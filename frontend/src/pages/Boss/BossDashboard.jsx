@@ -59,7 +59,7 @@ const BossDashboard = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <Loader2 className="animate-spin text-indigo-600" size={40} />
-                <p className="text-gray-400 font-bold italic animate-pulse">Aggregating Global Systems Data...</p>
+                <p className="text-gray-400 font-bold animate-pulse">Aggregating Global Systems Data...</p>
             </div>
         );
     }
@@ -122,10 +122,10 @@ const BossDashboard = () => {
                                         <p className="text-sm font-bold text-gray-800 truncate">{item.title}</p>
                                         <p className="text-[10px] lg:text-xs text-gray-400 font-medium tracking-tight whitespace-nowrap">{item.type} Branch Operation</p>
                                     </div>
-                                    <p className="font-bold text-sm lg:text-base text-black italic shrink-0">{item.val}</p>
+                                    <p className="font-bold text-sm lg:text-base text-black shrink-0">{item.val}</p>
                                 </div>
                             ))}
-                            {stats?.recentActivity.length === 0 && <p className="text-center py-20 text-gray-400 italic">No recent activity detected.</p>}
+                            {stats?.recentActivity.length === 0 && <p className="text-center py-20 text-gray-400">No recent activity detected.</p>}
                         </div>
 
                         {/* Chart labels */}
@@ -146,7 +146,7 @@ const BossDashboard = () => {
                             </svg>
                             <div className="absolute flex flex-col items-center">
                                 <p className="text-[8px] lg:text-[10px] font-bold text-gray-400 uppercase">Resolution</p>
-                                <p className="text-xl lg:text-2xl font-bold italic">{stats?.resolutionRate}%</p>
+                                <p className="text-xl lg:text-2xl font-bold">{stats?.resolutionRate}%</p>
                             </div>
                         </div>
 

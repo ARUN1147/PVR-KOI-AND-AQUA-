@@ -25,7 +25,7 @@ const BossReports = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <Loader2 className="animate-spin text-indigo-600" size={40} />
-                <p className="text-gray-400 font-bold italic animate-pulse">Generating Global Analytics...</p>
+                <p className="text-gray-400 font-bold animate-pulse">Generating Global Analytics...</p>
             </div>
         );
     }
