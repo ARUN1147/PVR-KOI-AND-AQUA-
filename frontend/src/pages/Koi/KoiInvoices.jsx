@@ -284,15 +284,52 @@ const KoiInvoices = () => {
                 margin: 0,
                 filename: `Koi_Invoice_${formData.invoiceNumber}.pdf`,
                 image: { type: 'jpeg', quality: 1.0 },
-                html2canvas: { scale: 3, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true,
+                    logging: false,
+                    letterRendering: true,
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
-            window.html2pdf().set(opt).from(element).save().then(() => setIsExporting(false));
-        }, 300);
+            window.scrollTo(0, 0);
+            window.html2pdf().set(opt).from(element).save().then(() => {
+                setIsExporting(true);
+                setTimeout(() => setIsExporting(false), 500);
+            });
+        }, 500);
     };
 
-    const handlePrint = () => {
-        window.print();
+    const handlePrint = (targetElementId) => {
+        setIsExporting(true);
+        setTimeout(() => {
+            const bodyChildren = Array.from(document.body.children);
+            const elementsToHide = bodyChildren.filter(el => el.id !== targetElementId);
+
+            elementsToHide.forEach(el => {
+                if (el.style) el.style.visibility = 'hidden';
+            });
+
+            const printableElement = document.getElementById(targetElementId);
+            if (printableElement) {
+                if (printableElement.style) printableElement.style.visibility = 'visible';
+                printableElement.classList.add('print-only-element');
+            }
+
+            window.print();
+
+            elementsToHide.forEach(el => {
+                if (el.style) el.style.visibility = '';
+            });
+            if (printableElement) {
+                if (printableElement.style) printableElement.style.visibility = '';
+                printableElement.classList.remove('print-only-element');
+            }
+            setIsExporting(false);
+        }, 500);
     };
 
     const handleViewInvoice = (inv) => {
@@ -324,7 +361,7 @@ const KoiInvoices = () => {
         setViewMode('creator');
         setIsViewModalOpen(false);
         setTimeout(() => {
-            window.print();
+            handlePrint('koi-invoice-to-print');
         }, 500);
     };
 
@@ -363,10 +400,22 @@ const KoiInvoices = () => {
                 margin: 0,
                 filename: `Koi_Invoice_${inv.invoiceNumber}.pdf`,
                 image: { type: 'jpeg', quality: 1.0 },
-                html2canvas: { scale: 3, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true,
+                    logging: false,
+                    letterRendering: true,
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
-            window.html2pdf().set(opt).from(element).save().then(() => setIsExporting(false));
+            window.scrollTo(0, 0);
+            window.html2pdf().set(opt).from(element).save().then(() => {
+                setIsExporting(true);
+                setTimeout(() => setIsExporting(false), 500);
+            });
         }, 500);
     };
 
@@ -556,7 +605,7 @@ const KoiInvoices = () => {
                             <button onClick={handleCreateInvoice} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-black transition-all">
                                 <CheckCircle2 size={14} /> {editingInvoiceId ? 'Update Invoice' : 'Save Invoice'}
                             </button>
-                            <button onClick={handlePrint} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-all">
+                            <button onClick={() => handlePrint('koi-invoice-to-print')} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-all">
                                 <Printer size={14} /> Print
                             </button>
                             <button onClick={handleDownloadPDF} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all">
@@ -596,8 +645,14 @@ const KoiInvoices = () => {
             {viewMode === 'creator' ? (
                 <div className="flex justify-center bg-gray-50 rounded-3xl p-4 md:p-8 min-h-[1000px] overflow-x-auto shadow-inner border border-gray-200">
                     <div
-                        style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-                        className={`bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative ${isExporting ? 'exporting-pdf' : ''}`}
+                        style={{ 
+                            transform: isExporting ? 'scale(1)' : `scale(${zoom})`, 
+                            transformOrigin: 'top center',
+                            transition: isExporting ? 'none' : 'transform 0.2s ease-out',
+                            width: '210mm',
+                            minHeight: '296mm'
+                        }}
+                        className={`bg-white shadow-2xl p-8 flex flex-col gap-6 relative overflow-hidden ${isExporting ? 'exporting-pdf' : ''}`}
                         id="koi-invoice-to-print"
                     >
                         {/* THE PROFESSIONAL TAX INVOICE TEMPLATE (Mirroring Aqua) */}
@@ -1040,7 +1095,14 @@ const KoiInvoices = () => {
 
                     <div className="overflow-auto bg-gray-100 p-8 rounded-2xl flex justify-center shadow-inner">
                         {selectedInvoice && (
-                            <div className={`bg-white shadow-2xl w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative ${isExporting ? 'exporting-pdf' : ''}`} id="view-invoice-to-print">
+                            <div 
+                                className={`bg-white shadow-2xl p-8 flex flex-col gap-6 relative overflow-hidden ${isExporting ? 'exporting-pdf' : ''}`} 
+                                style={{
+                                    width: isExporting ? '210mm' : '800px',
+                                    minHeight: isExporting ? '296mm' : '1100px'
+                                }}
+                                id="view-invoice-to-print"
+                            >
                                 {/* PROFESSIONAL TAX INVOICE TEMPLATE (READ ONLY) */}
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
                                     <div style={{ textAlign: 'center', padding: '8px', fontWeight: 'bold', fontSize: '16px', background: '#eef2fb', color: '#1e3a8a', borderBottom: '1px solid #b0b8cc', letterSpacing: '4px' }}>

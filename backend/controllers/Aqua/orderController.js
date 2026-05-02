@@ -58,13 +58,19 @@ exports.createOrderFromQuotation = async (req, res) => {
 
         if (!customerId) throw new Error('Customer ID is required to create an order');
 
-        const order = await Order.create({ 
+        // Filter out items with no productId to avoid Mongoose validation errors
+        const validItems = (items || []).filter(item => item.productId && item.productId !== '');
+        
+        if (validItems.length === 0) throw new Error('At least one valid product is required');
+
+        let order = await Order.create({ 
             customerId, 
             enquiryId, 
-            items, 
+            items: validItems, 
             totalAmount, 
             ...rest 
         });
+        
         
         // Stock deduction for direct orders
         if (order.status === 'Dispatched' || order.status === 'Completed') {
@@ -94,9 +100,14 @@ exports.createOrderFromQuotation = async (req, res) => {
                 status: 'Pending'
             });
         }
-        res.status(201).json(order);
+
+        // Populate the order before returning to ensure frontend has all details (like product names)
+        const populatedOrder = await Order.findById(order._id).populate('customerId').populate('items.productId');
+        
+        res.status(201).json(populatedOrder);
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        console.error("Error in createOrderFromQuotation:", err);
+        res.status(400).json({ message: err.message, error: err });
     }
 };
 
@@ -260,5 +271,15 @@ exports.convertEnquiryToCustomer = async (req, res) => {
         res.json({ message: 'Lead promoted to Customer successfully', customer, enquiry });
     } catch (err) {
         res.status(400).json({ message: err.message });
+    }
+};
+
+exports.deleteOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Order.findByIdAndDelete(id);
+        res.json({ message: 'Order deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 };

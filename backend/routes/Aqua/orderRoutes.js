@@ -9,6 +9,7 @@ const {
     createOrderFromQuotation, 
     updatePayment, 
     updateOrderStatus,
+    deleteOrder,
     convertEnquiryToCustomer
 } = require('../../controllers/Aqua/orderController');
 
@@ -21,6 +22,7 @@ router.get('/', getOrders);
 router.post('/', createOrderFromQuotation);
 router.patch('/:id/payment', updatePayment);
 router.patch('/:id/status', updateOrderStatus);
+router.delete('/:id', deleteOrder);
 
 module.exports = router;
 

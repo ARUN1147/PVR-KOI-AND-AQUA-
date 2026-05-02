@@ -82,6 +82,7 @@ export const getOrders = () => api.get('/orders');
 export const createOrder = (data) => api.post('/orders', data);
 export const updatePayment = (id, amount) => api.patch(`/orders/${id}/payment`, { amount });
 export const updateOrderStatus = (id, status) => api.patch(`/orders/${id}/status`, { status });
+export const deleteOrder = (id) => api.delete(`/orders/${id}`);
 
 // Invoices
 export const getAquaInvoices = () => api.get('/invoices');

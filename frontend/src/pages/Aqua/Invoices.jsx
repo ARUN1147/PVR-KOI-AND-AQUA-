@@ -132,6 +132,18 @@ const Invoices = () => {
 
     const handleCreateInvoice = async (e) => {
         if (e) e.preventDefault();
+        
+        if (!newInvoice.customerId) {
+            alert('Please select a customer first.');
+            return;
+        }
+
+        const validItems = newInvoice.items.filter(item => item.productId);
+        if (validItems.length === 0) {
+            alert('Please add at least one product to the invoice.');
+            return;
+        }
+
         try {
             const subTotal = newInvoice.items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
             const transport = newInvoice.transportCharges || 0;
@@ -141,6 +153,7 @@ const Invoices = () => {
 
             const orderData = {
                 ...newInvoice,
+                items: validItems,
                 totalAmount: totalWithTax,
                 paidAmount: totalWithTax,
                 status: 'Completed'
@@ -203,6 +216,36 @@ const Invoices = () => {
         setIsInvoiceModalOpen(true);
     };
 
+    const handleDirectPrint = (order) => {
+        setSelectedOrder(order);
+        setIsExporting(true);
+        // Directly trigger print using the hidden container
+        setTimeout(() => {
+            handlePrint('invoice-direct-print');
+        }, 600);
+    };
+
+    const handleDirectDownload = (order) => {
+        setSelectedOrder(order);
+        setIsExporting(true);
+        // Directly trigger download using the hidden container
+        setTimeout(() => {
+            handleDownloadPDF('invoice-direct-print');
+        }, 600);
+    };
+
+    const handleDeleteOrder = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this invoice?')) return;
+        try {
+            const { deleteOrder } = await import('../../services/api');
+            await deleteOrder(id);
+            fetchInvoices();
+        } catch (err) {
+            console.error(err);
+            alert('Error deleting invoice');
+        }
+    };
+
     const getStatusStyles = (status) => {
         switch (status) {
             case 'Completed': return 'bg-green-100 text-green-700';
@@ -226,70 +269,88 @@ const Invoices = () => {
 
     const handleDownloadPDF = (targetElementId) => {
         if (typeof window.html2pdf === 'undefined') {
-            alert('PDF library is loading... Please try again in a second.');
+            alert('PDF library is still loading... Please wait a moment.');
             return;
         }
 
         setIsExporting(true);
 
-        // Allow React to re-render the "Clean" version for capture
         setTimeout(() => {
             const element = document.getElementById(targetElementId);
 
             if (!element) {
                 setIsExporting(false);
-                console.error("Target element for PDF not found:", targetElementId);
                 return;
             }
 
             const opt = {
-                margin: [10, 10],
+                margin: 0,
                 filename: `Invoice_${selectedOrder?._id?.slice(-6).toUpperCase() || 'New'}.pdf`,
-                image: { type: 'jpeg', quality: 1.0 },
+                image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
-                    scale: 3,
+                    scale: 2,
                     useCORS: true,
-                    letterRendering: true,
-                    // Ignore elements with 'no-print' class during canvas rendering
-                    ignoreElements: (el) => el.classList.contains('no-print')
+                    letterRendering: false,
+                    logging: false,
+                    windowWidth: 800
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
 
             window.html2pdf().set(opt).from(element).save().then(() => {
+                setTimeout(() => setIsExporting(false), 1000);
+            }).catch(err => {
+                console.error("PDF Export Error:", err);
                 setIsExporting(false);
             });
-        }, 300);
+        }, 800);
     };
 
     const handlePrint = (targetElementId) => {
-        // Temporarily hide all elements except the target for printing
-        const bodyChildren = Array.from(document.body.children);
-        const elementsToHide = bodyChildren.filter(el => el.id !== targetElementId);
+        setIsExporting(true);
 
-        elementsToHide.forEach(el => {
-            if (el.style) el.style.visibility = 'hidden';
-            if (el.classList) el.classList.add('hide-for-print'); // Add a class for CSS hiding
-        });
+        setTimeout(() => {
+            const bodyChildren = Array.from(document.body.children);
+            const printableElement = document.getElementById(targetElementId);
+            
+            if (!printableElement) {
+                setIsExporting(false);
+                return;
+            }
 
-        const printableElement = document.getElementById(targetElementId);
-        if (printableElement) {
+            // Hide everything else
+            bodyChildren.forEach(el => {
+                if (el.id !== 'root' && el.style) {
+                    el.style.display = 'none';
+                }
+            });
+
+            const elementsToHide = bodyChildren.filter(el => el.id !== targetElementId);
+            elementsToHide.forEach(el => {
+                if (el.style) el.style.visibility = 'hidden';
+                if (el.classList) el.classList.add('hide-for-print');
+            });
+
             if (printableElement.style) printableElement.style.visibility = 'visible';
-            if (printableElement.classList) printableElement.classList.add('print-only-element');
-        }
+            printableElement.classList.add('print-only-element');
 
-        window.print();
+            window.print();
 
-        // Restore visibility after printing
-        elementsToHide.forEach(el => {
-            if (el.style) el.style.visibility = '';
-            if (el.classList) el.classList.remove('hide-for-print');
-        });
-        if (printableElement) {
-            if (printableElement.style) printableElement.style.visibility = '';
-            if (printableElement.classList) printableElement.classList.remove('print-only-element');
-        }
+            // Restore
+            bodyChildren.forEach(el => {
+                if (el.id !== 'root' && el.style) {
+                    el.style.display = '';
+                }
+            });
+            elementsToHide.forEach(el => {
+                if (el.style) el.style.visibility = '';
+                if (el.classList) el.classList.remove('hide-for-print');
+            });
+            printableElement.classList.remove('print-only-element');
+            
+            setTimeout(() => setIsExporting(false), 1000);
+        }, 800);
     };
 
 
@@ -354,11 +415,13 @@ const Invoices = () => {
                 <div className="flex justify-center bg-gray-50 rounded-3xl p-8 min-h-[1000px] overflow-x-auto shadow-inner border border-gray-200">
                     <div
                         style={{
-                            transform: `scale(${zoom})`,
+                            transform: isExporting ? 'scale(1)' : `scale(${zoom})`,
                             transformOrigin: 'top center',
-                            transition: 'transform 0.2s ease-out'
+                            transition: isExporting ? 'none' : 'transform 0.2s ease-out',
+                            width: '210mm',
+                            minHeight: '296mm'
                         }}
-                        className="bg-white shadow-2xl rounded-sm w-[800px] min-h-[1100px] p-12 flex flex-col gap-6 relative print:shadow-none print:scale-100 print:p-0 print:m-0"
+                        className="bg-white shadow-2xl rounded-sm p-8 flex flex-col gap-6 relative print:shadow-none print:scale-100 print:p-0 print:m-0 overflow-hidden"
                         id="invoice-to-print"
                     >
                         {/* ===== TAX INVOICE LAYOUT ===== */}
@@ -387,26 +450,42 @@ const Invoices = () => {
                                                 className="no-print-input" // Add class to hide border/background in print
                                             />
                                         )}
-                                        <textarea
-                                            style={{ border: 'none', outline: 'none', fontSize: '10.5px', color: '#444', lineHeight: '1.6', textAlign: 'center', width: '100%', background: 'transparent', resize: 'none', height: '35px', marginTop: '3px' }}
-                                            value={newInvoice.companyInfo.address}
-                                            onChange={(e) => setNewInvoice({ ...newInvoice, companyInfo: { ...newInvoice.companyInfo, address: e.target.value } })}
-                                            className="no-print-input"
-                                        />
-                                        <input
-                                            style={{ border: 'none', outline: 'none', fontSize: '10.5px', color: '#444', textAlign: 'center', width: '100%', background: 'transparent' }}
-                                            value={newInvoice.companyInfo.contact}
-                                            onChange={(e) => setNewInvoice({ ...newInvoice, companyInfo: { ...newInvoice.companyInfo, contact: e.target.value } })}
-                                            className="no-print-input"
-                                        />
-                                        <div style={{ marginTop: '5px', background: '#f0f4ff', padding: '2px 6px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a' }}>GSTIN/UIN : </span>
-                                            <input
-                                                style={{ border: 'none', outline: 'none', fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', background: 'transparent', width: '140px', marginLeft: '4px' }}
-                                                value={newInvoice.companyInfo.gstin}
-                                                onChange={(e) => setNewInvoice({ ...newInvoice, companyInfo: { ...newInvoice.companyInfo, gstin: e.target.value } })}
+                                        {isExporting ? (
+                                            <div style={{ fontSize: '10.5px', color: '#444', lineHeight: '1.6', textAlign: 'center', width: '100%', marginTop: '3px', whiteSpace: 'pre-line' }}>
+                                                {newInvoice.companyInfo.address}
+                                            </div>
+                                        ) : (
+                                            <textarea
+                                                style={{ border: 'none', outline: 'none', fontSize: '10.5px', color: '#444', lineHeight: '1.6', textAlign: 'center', width: '100%', background: 'transparent', resize: 'none', height: '35px', marginTop: '3px' }}
+                                                value={newInvoice.companyInfo.address}
+                                                onChange={(e) => setNewInvoice({ ...newInvoice, companyInfo: { ...newInvoice.companyInfo, address: e.target.value } })}
                                                 className="no-print-input"
                                             />
+                                        )}
+                                        {isExporting ? (
+                                            <div style={{ fontSize: '10.5px', color: '#444', textAlign: 'center', width: '100%' }}>
+                                                {newInvoice.companyInfo.contact}
+                                            </div>
+                                        ) : (
+                                            <input
+                                                style={{ border: 'none', outline: 'none', fontSize: '10.5px', color: '#444', textAlign: 'center', width: '100%', background: 'transparent' }}
+                                                value={newInvoice.companyInfo.contact}
+                                                onChange={(e) => setNewInvoice({ ...newInvoice, companyInfo: { ...newInvoice.companyInfo, contact: e.target.value } })}
+                                                className="no-print-input"
+                                            />
+                                        )}
+                                        <div style={{ marginTop: '5px', background: '#f0f4ff', padding: '2px 6px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a' }}>GSTIN/UIN : </span>
+                                            {isExporting ? (
+                                                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', marginLeft: '4px' }}>{newInvoice.companyInfo.gstin}</span>
+                                            ) : (
+                                                <input
+                                                    style={{ border: 'none', outline: 'none', fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', background: 'transparent', width: '140px', marginLeft: '4px' }}
+                                                    value={newInvoice.companyInfo.gstin}
+                                                    onChange={(e) => setNewInvoice({ ...newInvoice, companyInfo: { ...newInvoice.companyInfo, gstin: e.target.value } })}
+                                                    className="no-print-input"
+                                                />
+                                            )}
                                         </div>
                                     </div>
 
@@ -415,7 +494,7 @@ const Invoices = () => {
                                         <div style={{ background: '#dde5f5', padding: '6px 8px', fontWeight: 'bold', color: '#1e3a8a', textAlign: 'center', borderBottom: '1px solid #b0b8cc', fontSize: '12px' }}>
                                             BILL TO
                                         </div>
-                                        <div style={{ padding: '8px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                             {isExporting ? (
                                                 <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#1e1e1e', width: '100%' }}>
                                                     {newInvoice.billingInfo.name || 'N/A'}
@@ -494,9 +573,10 @@ const Invoices = () => {
                                             </div>
                                         </div>
                                         {/* Sales & Tax */}
-                                        <div className="no-print" style={{ padding: '4px 10px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '3px', background: '#fcfcfc' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-                                                <span style={{ color: '#888', fontWeight: 'bold' }}>TAX CATEGORY:</span>
+                                        {!isExporting && (
+                                            <div className="no-print" style={{ padding: '4px 10px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '3px', background: '#fcfcfc' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                                                    <span style={{ color: '#888', fontWeight: 'bold' }}>TAX CATEGORY:</span>
                                                 <select
                                                     style={{ border: 'none', fontSize: '10px', fontWeight: 'bold', background: 'transparent' }}
                                                     value={newInvoice.taxPhase}
@@ -506,8 +586,9 @@ const Invoices = () => {
                                                     <option value="Inside TN">Inside TN (CGST/SGST)</option>
                                                     <option value="Outside TN">Outside TN (IGST)</option>
                                                 </select>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -528,13 +609,17 @@ const Invoices = () => {
                                     <div style={{ display: 'flex', borderBottom: '1px solid #b0b8cc', height: '35px' }}>
                                         <div style={{ padding: '4px 8px', fontWeight: 'bold', color: '#1e3a8a', fontSize: '11px', flex: 1, borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'center' }}>DATE</div>
                                         <div style={{ padding: '4px 8px', fontWeight: 'bold', color: '#333', fontSize: '11px', flex: 1.5, display: 'flex', alignItems: 'center' }}>
-                                            <input
-                                                type="date"
-                                                style={{ border: 'none', outline: 'none', fontWeight: 'bold', color: '#1e3a8a', fontSize: '11px', background: 'transparent', width: '100%' }}
-                                                value={newInvoice.invoiceDate}
-                                                onChange={(e) => setNewInvoice({ ...newInvoice, invoiceDate: e.target.value })}
-                                                className="no-print-input"
-                                            />
+                                            {isExporting ? (
+                                                <span>{new Date(newInvoice.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                            ) : (
+                                                <input
+                                                    type="date"
+                                                    style={{ border: 'none', outline: 'none', fontWeight: 'bold', color: '#1e3a8a', fontSize: '11px', background: 'transparent', width: '100%' }}
+                                                    value={newInvoice.invoiceDate}
+                                                    onChange={(e) => setNewInvoice({ ...newInvoice, invoiceDate: e.target.value })}
+                                                    className="no-print-input"
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                     <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', minHeight: '200px' }}>
@@ -563,7 +648,7 @@ const Invoices = () => {
                                             <td style={{ padding: '1px 4px', borderRight: '1px solid #e5e5e5' }}>
                                                 {isExporting ? (
                                                     <div style={{ width: '100%', fontSize: '11px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase' }}>
-                                                        {products.find(p => p._id === item.productId)?.name || 'SELECT ITEM'}
+                                                        {products.find(p => p._id === item.productId)?.name || ''}
                                                     </div>
                                                 ) : (
                                                     <select
@@ -797,9 +882,9 @@ const Invoices = () => {
                                         <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Invoice Date</th>
                                         <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order Info</th>
                                         <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Amount</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                                        <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest text-right">ACTIONS</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
@@ -843,10 +928,24 @@ const Invoices = () => {
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => handleViewInvoice(order)}
-                                                        className="p-2 hover:bg-primary-50 rounded-lg text-gray-400 hover:text-primary-600 transition-all"
-                                                        title="View/Print"
+                                                        className="p-2.5 bg-gray-50/80 hover:bg-white rounded-xl text-gray-400 hover:text-primary-600 transition-all shadow-sm border border-gray-100/50"
+                                                        title="View"
                                                     >
-                                                        <Eye size={18} />
+                                                        <Eye size={17} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDirectPrint(order)}
+                                                        className="p-2.5 bg-gray-50/80 hover:bg-white rounded-xl text-gray-400 hover:text-green-600 transition-all shadow-sm border border-gray-100/50"
+                                                        title="Print"
+                                                    >
+                                                        <Printer size={17} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDirectDownload(order)}
+                                                        className="p-2.5 bg-gray-50/80 hover:bg-white rounded-xl text-gray-400 hover:text-blue-600 transition-all shadow-sm border border-gray-100/50"
+                                                        title="Download"
+                                                    >
+                                                        <Download size={17} />
                                                     </button>
                                                     <button
                                                         onClick={() => {
@@ -857,18 +956,22 @@ const Invoices = () => {
                                                                 paidAmount: order.paidAmount
                                                             });
                                                         }}
-                                                        className="p-2 hover:bg-amber-50 rounded-lg text-gray-400 hover:text-amber-600 transition-all"
+                                                        className="p-2.5 bg-gray-50/80 hover:bg-white rounded-xl text-gray-400 hover:text-amber-600 transition-all shadow-sm border border-gray-100/50"
                                                         title="Edit Status/Payment"
                                                     >
-                                                        <Pencil size={18} />
+                                                        <Pencil size={17} />
                                                     </button>
                                                     {viewMode === 'deleted' ? (
-                                                        <button className="p-2 hover:bg-green-50 rounded-lg text-gray-400 hover:text-green-600 transition-all" title="Restore">
-                                                            <CheckCircle2 size={18} />
+                                                        <button className="p-2.5 bg-gray-50/80 hover:bg-white rounded-xl text-gray-400 hover:text-green-600 transition-all shadow-sm border border-gray-100/50" title="Restore">
+                                                            <CheckCircle2 size={17} />
                                                         </button>
                                                     ) : (
-                                                        <button className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-all" title="Delete">
-                                                            <Trash2 size={18} />
+                                                        <button 
+                                                            onClick={() => handleDeleteOrder(order._id)}
+                                                            className="p-2.5 bg-gray-50/80 hover:bg-white rounded-xl text-gray-400 hover:text-red-600 transition-all shadow-sm border border-gray-100/50" 
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 size={17} />
                                                         </button>
                                                     )}
                                                 </div>
@@ -1064,30 +1167,33 @@ const Invoices = () => {
             </Modal>
 
             {/* Premium Invoice Modal */}
-            <Modal isOpen={isInvoiceModalOpen} onClose={() => setIsInvoiceModalOpen(false)} title="Tax Invoice" maxWidth="max-w-3xl">
+            <Modal isOpen={isInvoiceModalOpen} onClose={() => setIsInvoiceModalOpen(false)} title="Tax Invoice" maxWidth="max-w-5xl">
                 {selectedOrder && (
                     <div className="bg-white rounded-lg overflow-hidden flex flex-col">
                         <div
                             id="invoice-modal-print"
-                            className="bg-white w-full p-12 flex flex-col gap-6 relative"
-                            style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px' }}
+                            className="bg-white rounded-sm p-8 flex flex-col gap-6 relative print:shadow-none print:scale-100 print:p-0 print:m-0 overflow-visible"
+                            style={{ 
+                                fontFamily: "'Outfit', sans-serif", 
+                                fontSize: '12px',
+                                width: isExporting ? '210mm' : '100%',
+                                minHeight: isExporting ? '296mm' : 'auto'
+                            }}
                         >
-                            <div style={{ border: '1px solid #b0b8cc' }}>
+                            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
                                 {/* TOP TITLE */}
                                 <div style={{ textAlign: 'center', padding: '8px', fontWeight: 'bold', fontSize: '16px', background: '#eef2fb', borderBottom: '1px solid #b0b8cc', letterSpacing: '4px' }}>
                                     TAX INVOICE
                                 </div>
 
                                 {/* MAIN BOX START */}
-                                <div>
-
-                                    {/* HEADER: (Col 1: Company & Bill To) | (Col 2: Inv No, Date, Logo) */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                {/* HEADER: (Col 1: Company & Bill To) | (Col 2: Inv No, Date, Logo) */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
                                         {/* Left Column: Company & Bill To */}
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                             {/* Company Info */}
                                             <div style={{ padding: '8px 12px', borderRight: '1px solid #b0b8cc', borderBottom: '1px solid #b0b8cc' }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#1e3a8a', textAlign: 'center', width: '100%', textTransform: 'uppercase' }}>
+                                                <div style={{ fontWeight: '900', fontSize: '22px', color: '#1e3a8a', textAlign: 'center', width: '100%', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                                     {selectedOrder.companyInfo?.name || 'PVR AQUACULTURE'}
                                                 </div>
                                                 <div style={{ fontSize: '10.5px', color: '#444', lineHeight: '1.6', textAlign: 'center', whiteSpace: 'pre-line', marginTop: '3px' }}>
@@ -1113,7 +1219,7 @@ const Invoices = () => {
                                                     <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#1e1e1e' }}>
                                                         {selectedOrder.billingInfo?.name || selectedOrder.customerId?.name || 'N/A'}
                                                     </div>
-                                                    <div style={{ fontSize: '11px', color: '#555', lineHeight: '1.6', minHeight: '40px' }}>
+                                                    <div style={{ fontSize: '11px', color: '#555', lineHeight: '1.6', minHeight: '45px' }}>
                                                         {selectedOrder.billingInfo?.address || selectedOrder.customerId?.address || ''}
                                                     </div>
                                                     <div style={{ fontSize: '11px', color: '#444' }}>
@@ -1152,24 +1258,24 @@ const Invoices = () => {
                                     <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '1px solid #b0b8cc' }}>
                                         <thead>
                                             <tr style={{ background: '#1e3a8a', color: 'white' }}>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '50px' }}>SL.NO</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '40px' }}>SL.NO</th>
                                                 <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa' }}>PRODUCT</th>
                                                 <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '80px' }}>HSN/SAC</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '60px' }}>QTY</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '100px' }}>UNIT PRICE</th>
-                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', width: '110px' }}>AMOUNT</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '50px' }}>QTY</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '90px' }}>UNIT PRICE</th>
+                                                <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '90px' }}>AMOUNT</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                                 selectedOrder.items.map((item, idx) => (
-                                                    <tr key={idx} style={{ borderBottom: '1px solid #eee', height: '30px' }}>
-                                                        <td style={{ padding: '2px 6px', textAlign: 'center', fontSize: '11px', borderRight: '1px solid #eee', color: '#888' }}>{idx + 1}</td>
-                                                        <td style={{ padding: '2px 6px', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #eee', textTransform: 'uppercase' }}>{item.productId?.name || 'Order Item'}</td>
-                                                        <td style={{ padding: '2px 6px', textAlign: 'center', fontSize: '11px', borderRight: '1px solid #eee', color: '#666' }}>{item.hsnSac || item.productId?.hsnSac || '-'}</td>
-                                                        <td style={{ padding: '2px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #eee' }}>{item.quantity}</td>
-                                                        <td style={{ padding: '2px 6px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #eee' }}>₹{item.price?.toLocaleString()}</td>
-                                                        <td style={{ padding: '2px 6px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', color: '#1e1e1e' }}>₹{(item.quantity * item.price).toLocaleString()}</td>
+                                                    <tr key={idx} style={{ borderBottom: '1px solid #e5e5e5', height: '30px' }}>
+                                                        <td style={{ padding: '2px 4px', textAlign: 'center', fontSize: '11px', borderRight: '1px solid #e5e5e5', color: '#888' }}>{idx + 1}</td>
+                                                        <td style={{ padding: '1px 4px', borderRight: '1px solid #e5e5e5', fontSize: '11px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase' }}>{item.productId?.name || 'Order Item'}</td>
+                                                        <td style={{ padding: '1px 4px', textAlign: 'center', fontSize: '11px', borderRight: '1px solid #e5e5e5', color: '#333', fontWeight: 'bold' }}>{item.hsnSac || item.productId?.hsnSac || '-'}</td>
+                                                        <td style={{ padding: '1px 4px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #e5e5e5' }}>{item.quantity}</td>
+                                                        <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #e5e5e5' }}>₹{item.price?.toLocaleString()}</td>
+                                                        <td style={{ padding: '2px 4px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', color: '#1e1e1e', borderRight: '1px solid #e5e5e5' }}>₹{(item.quantity * item.price).toLocaleString()}</td>
                                                     </tr>
                                                 ))
                                             ) : (
@@ -1178,14 +1284,14 @@ const Invoices = () => {
                                                 </tr>
                                             )}
                                             {/* Empty rows to fill the table */}
-                                            {[...Array(Math.max(0, 10 - (selectedOrder.items?.length || 0)))].map((_, i) => (
-                                                <tr key={`empty-${i}`} style={{ height: '24px', borderBottom: '1px solid #f9f9f9' }}>
-                                                    <td style={{ borderRight: '1px solid #eee' }}></td>
-                                                    <td style={{ borderRight: '1px solid #eee' }}></td>
-                                                    <td style={{ borderRight: '1px solid #eee' }}></td>
-                                                    <td style={{ borderRight: '1px solid #eee' }}></td>
-                                                    <td style={{ borderRight: '1px solid #eee' }}></td>
-                                                    <td></td>
+                                            {[...Array(Math.max(0, 8 - (selectedOrder.items?.length || 0)))].map((_, i) => (
+                                                <tr key={`empty-${i}`} style={{ height: '24px', borderBottom: '1px solid #e5e5e5' }}>
+                                                    <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                                    <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                                    <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                                    <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                                    <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                                    <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -1279,9 +1385,8 @@ const Invoices = () => {
                                     <div style={{ textAlign: 'center', padding: '16px', fontSize: '13px', fontWeight: 'bold', color: '#1e3a8a', fontStyle: 'italic' }}>
                                         Thank You For Business!
                                     </div>
-                                </div> {/* MAIN BOX END */}
+                                </div> 
                             </div>
-                        </div>
 
                         {/* Modal Actions */}
                         <div className="p-6 bg-gray-50 border-t-2 border-gray-100 flex justify-center items-center no-print gap-6">
@@ -1355,91 +1460,63 @@ const Invoices = () => {
                 {`
                 @media print {
                     @page { 
-                        margin: 0; 
+                        size: A4;
+                        margin: 0mm; 
                     }
-                    /* Hide everything by default */
+                    
+                    /* Hide everything */
                     body * {
                         visibility: hidden !important;
-                        overflow: hidden !important; /* Hide scrollbars if present */
                     }
 
-                    /* Only show the element with 'print-only-element' and its children */
+                    /* Show only printable area and its content */
                     .print-only-element, .print-only-element * {
                         visibility: visible !important;
-                        -webkit-print-color-adjust: exact !important; /* For Chrome/Safari */
-                        color-adjust: exact !important; /* Standard */
+                        -webkit-print-color-adjust: exact !important;
+                        color-adjust: exact !important;
                     }
 
-                    /* Position the printable content */
+                    /* Ensure the wrapper is visible */
+                    #direct-export-wrapper {
+                        visibility: visible !important;
+                        display: block !important;
+                    }
+
+                    /* Force the printable element to the top-left */
                     .print-only-element {
-                        position: absolute !important;
+                        position: fixed !important;
                         left: 0 !important;
                         top: 0 !important;
                         width: 100% !important;
+                        height: 100% !important;
+                        z-index: 99999 !important;
+                        background: white !important;
+                        display: flex !important;
+                        justify-content: center !important;
+                        align-items: flex-start !important;
+                        padding: 0 !important;
                         margin: 0 !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                    }
+
+                    /* Content wrapper for A4 sizing */
+                    .print-only-element > div {
+                        width: 210mm !important;
+                        min-height: 297mm !important;
                         padding: 10mm !important;
-                        border: none !important;
-                        box-shadow: none !important;
-                        transform: scale(1) !important;
-                        display: block !important; /* Ensure it's a block element */
-                        background: white !important; /* Ensure white background */
                         box-sizing: border-box !important;
                     }
 
-                    /* Hide specific UI elements within the printable area if they are part of the original HTML */
-                    .no-print,
-                    .no-print button,
-                    button,
-                    .lucide {
+                    .no-print, .no-print * {
                         display: none !important;
                     }
 
-                    /* Force inputs/textareas/selects to display their value as text */
-                    input.no-print-input,
-                    textarea.no-print-input,
-                    select.no-print-select {
-                        display: inline-block !important;
-                        border: none !important;
-                        background: transparent !important;
-                        appearance: none !important;
-                        -webkit-appearance: none !important;
-                        color: black !important;
-                        padding: 0 !important;
-                        font-family: inherit !important;
-                        font-size: inherit !important;
-                        font-weight: bold !important;
-                        min-width: 0 !important;
-                        text-align: inherit !important; /* Inherit text alignment */
-                    }
-
-                    textarea.no-print-input {
-                        height: auto !important;
+                    /* Neutralize potential scrollbars */
+                    body, html {
                         overflow: visible !important;
+                        height: auto !important;
                     }
-
-                    /* Override specific styling for printed input values to ensure readability */
-                    input[type="date"].no-print-input {
-                        -webkit-appearance: none !important;
-                        appearance: none !important;
-                        &::-webkit-datetime-edit {
-                            display: block !important;
-                            visibility: visible !important;
-                        }
-                    }
-
-                    /* General print styling */
-                    body {
-                        background: white !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-
-                    .page-break { page-break-after: always; }
-                }
-
-                @page {
-                    size: A4;
-                    margin: 0mm;
                 }
                 `}
             </style>
@@ -1458,6 +1535,197 @@ const Invoices = () => {
                     </div>
                 </div>
             )}
+
+            {/* Hidden Direct Export Container - Use visibility: hidden instead of opacity: 0 */}
+            <div 
+                id="direct-export-wrapper" 
+                className="fixed top-0 left-0 pointer-events-none" 
+                style={{ width: '210mm', zIndex: -1, visibility: 'hidden' }}
+            >
+                {isExporting && selectedOrder && !isInvoiceModalOpen && (
+                    <div 
+                        id="invoice-direct-print"
+                        className="bg-white p-8 flex flex-col gap-6 overflow-visible"
+                        style={{ 
+                            fontFamily: "'Outfit', sans-serif", 
+                            fontSize: '12px',
+                            width: '210mm',
+                            minHeight: '296mm'
+                        }}
+                    >
+                        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '12px', width: '100%', border: '1px solid #b0b8cc' }}>
+                            <div style={{ textAlign: 'center', padding: '8px', fontWeight: 'bold', fontSize: '16px', background: '#eef2fb', borderBottom: '1px solid #b0b8cc', letterSpacing: '4px' }}>
+                                TAX INVOICE
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ padding: '8px 12px', borderRight: '1px solid #b0b8cc', borderBottom: '1px solid #b0b8cc' }}>
+                                        <div style={{ fontWeight: '900', fontSize: '22px', color: '#1e3a8a', textAlign: 'center', width: '100%', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                            {selectedOrder.companyInfo?.name || 'PVR AQUACULTURE'}
+                                        </div>
+                                        <div style={{ fontSize: '10.5px', color: '#444', lineHeight: '1.6', textAlign: 'center', whiteSpace: 'pre-line', marginTop: '3px' }}>
+                                            {selectedOrder.companyInfo?.address || '334E, KUMARAN NAGAR, ILLUPUR TALUK,\nPerumanadu, Pudukkottai, Tamil Nadu, 622104'}
+                                        </div>
+                                        <div style={{ fontSize: '10.5px', color: '#444', textAlign: 'center' }}>
+                                            {selectedOrder.companyInfo?.contact || '+91 9600124725, +91 9003424998'}
+                                        </div>
+                                        <div style={{ marginTop: '5px', background: '#f0f4ff', padding: '2px 6px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a' }}>GSTIN/UIN : </span>
+                                            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', marginLeft: '4px' }}>
+                                                {selectedOrder.companyInfo?.gstin || '33CQRPA2571H1ZW'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{ borderRight: '1px solid #b0b8cc', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ background: '#dde5f5', padding: '6px 8px', fontWeight: 'bold', color: '#1e3a8a', textAlign: 'center', borderBottom: '1px solid #b0b8cc', fontSize: '12px' }}>
+                                            BILL TO
+                                        </div>
+                                        <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#1e1e1e' }}>
+                                                {selectedOrder.billingInfo?.name || selectedOrder.customerId?.name || 'N/A'}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#555', lineHeight: '1.6', minHeight: '45px' }}>
+                                                {selectedOrder.billingInfo?.address || selectedOrder.customerId?.address || ''}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#444' }}>
+                                                <span style={{ fontWeight: 'bold' }}>Phone:</span> {selectedOrder.billingInfo?.phone || selectedOrder.customerId?.phone || ''}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#444' }}>
+                                                <span style={{ fontWeight: 'bold' }}>GSTIN/UIN:</span> {selectedOrder.billingInfo?.gstNo || selectedOrder.customerId?.gstNo || ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ display: 'flex', borderBottom: '1px solid #b0b8cc', height: '35px' }}>
+                                        <div style={{ padding: '4px 8px', fontWeight: 'bold', color: '#1e3a8a', fontSize: '11px', flex: 1, borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'center' }}>INVOICE NO.</div>
+                                        <div style={{ padding: '4px 8px', fontWeight: 'bold', color: '#333', fontSize: '11px', flex: 1.5, display: 'flex', alignItems: 'center' }}>
+                                            #{selectedOrder?._id?.slice(-6).toUpperCase() || 'NEW'}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', borderBottom: '1px solid #b0b8cc', height: '35px' }}>
+                                        <div style={{ padding: '4px 8px', fontWeight: 'bold', color: '#1e3a8a', fontSize: '11px', flex: 1, borderRight: '1px solid #b0b8cc', display: 'flex', alignItems: 'center' }}>DATE</div>
+                                        <div style={{ padding: '4px 8px', fontWeight: 'bold', color: '#333', fontSize: '11px', flex: 1.5, display: 'flex', alignItems: 'center' }}>
+                                            {new Date(selectedOrder.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', minHeight: '200px' }}>
+                                        <img src="/PVR.png" alt="Logo" style={{ maxHeight: '180px', maxWidth: '260px', objectFit: 'contain' }} />
+                                    </div>
+                                </div>
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '1px solid #b0b8cc' }}>
+                                <thead>
+                                    <tr style={{ background: '#1e3a8a', color: 'white' }}>
+                                        <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '40px' }}>SL.NO</th>
+                                        <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa' }}>PRODUCT</th>
+                                        <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '80px' }}>HSN/SAC</th>
+                                        <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '50px' }}>QTY</th>
+                                        <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '90px' }}>UNIT PRICE</th>
+                                        <th style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #3b5daa', width: '90px' }}>AMOUNT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedOrder.items?.map((item, idx) => (
+                                        <tr key={idx} style={{ borderBottom: '1px solid #e5e5e5', height: '30px' }}>
+                                            <td style={{ padding: '2px 4px', textAlign: 'center', fontSize: '11px', borderRight: '1px solid #e5e5e5', color: '#888' }}>{idx + 1}</td>
+                                            <td style={{ padding: '1px 4px', borderRight: '1px solid #e5e5e5', fontSize: '11px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase' }}>{item.productId?.name || 'Order Item'}</td>
+                                            <td style={{ padding: '1px 4px', textAlign: 'center', fontSize: '11px', borderRight: '1px solid #e5e5e5', color: '#333', fontWeight: 'bold' }}>{item.hsnSac || item.productId?.hsnSac || '-'}</td>
+                                            <td style={{ padding: '1px 4px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #e5e5e5' }}>{item.quantity}</td>
+                                            <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', borderRight: '1px solid #e5e5e5' }}>₹{item.price?.toLocaleString()}</td>
+                                            <td style={{ padding: '2px 4px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', color: '#1e1e1e', borderRight: '1px solid #e5e5e5' }}>₹{(item.quantity * item.price).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                    {[...Array(Math.max(0, 10 - (selectedOrder.items?.length || 0)))].map((_, i) => (
+                                        <tr key={`empty-${i}`} style={{ height: '24px', borderBottom: '1px solid #e5e5e5' }}>
+                                            <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                            <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                            <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                            <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                            <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                            <td style={{ borderRight: '1px solid #e5e5e5' }}></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {(() => {
+                                const subTotal = selectedOrder.items?.reduce((acc, item) => acc + (item.quantity * item.price), 0) || 0;
+                                const transport = selectedOrder.transportCharges || 0;
+                                const taxBase = subTotal + transport;
+                                const cgst = taxBase * 0.09;
+                                const sgst = taxBase * 0.09;
+                                const igst = taxBase * 0.18;
+                                return (
+                                    <div style={{ border: '1px solid #b0b8cc', borderTop: 'none' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr' }}>
+                                            <div style={{ borderRight: '1px solid #b0b8cc', padding: '12px' }}></div>
+                                            <div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: '11px' }}>
+                                                    <span style={{ color: '#555', fontWeight: 'bold' }}>TRANSPORT & INSTALLATION</span>
+                                                    <span style={{ fontWeight: 'bold' }}>₹{transport.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                {selectedOrder.taxPhase === 'Outside TN' ? (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: '11px' }}>
+                                                        <span style={{ color: '#555', fontWeight: 'bold' }}>IGST 18%</span>
+                                                        <span style={{ fontWeight: 'bold' }}>₹{igst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: '11px' }}>
+                                                            <span style={{ color: '#555', fontWeight: 'bold' }}>CGST 9%</span>
+                                                            <span style={{ fontWeight: 'bold' }}>₹{cgst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: '11px' }}>
+                                                            <span style={{ color: '#555', fontWeight: 'bold' }}>SGST 9%</span>
+                                                            <span style={{ fontWeight: 'bold' }}>₹{sgst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', background: '#dde5f5', borderTop: '1px solid #b0b8cc', borderBottom: '1px solid #b0b8cc' }}>
+                                            <div style={{ borderRight: '1px solid #b0b8cc' }}></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', fontSize: '16px', fontWeight: '900', color: '#1e3a8a' }}>
+                                                <span>TOTAL AMOUNT</span>
+                                                <span>₹{(selectedOrder.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', border: '1px solid #b0b8cc', borderTop: 'none' }}>
+                                <div style={{ borderRight: '1px solid #b0b8cc' }}>
+                                    <div style={{ background: '#dde5f5', color: '#1e3a8a', padding: '6px 8px', fontSize: '11px', fontWeight: 'bold', borderBottom: '1px solid #b0b8cc' }}>BANK DETAILS</div>
+                                    <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
+                                        <tbody>
+                                            {[
+                                                ['ACCOUNT NO', selectedOrder.bankDetails?.accountNo || '7037881010'],
+                                                ['IFSC CODE', selectedOrder.bankDetails?.ifscCode || 'IDIB000N140'],
+                                                ['BANK NAME', selectedOrder.bankDetails?.bankName || 'INDIAN BANK'],
+                                                ['BRANCH', selectedOrder.bankDetails?.branch || 'NATHAMPANNAI']
+                                            ].map(([label, value]) => (
+                                                <tr key={label}>
+                                                    <td style={{ padding: '4px 8px', fontWeight: 'bold', color: '#1e3a8a', width: '120px' }}>{label}</td>
+                                                    <td style={{ padding: '4px 8px', fontWeight: 'bold', color: '#333' }}>{value}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ background: '#dde5f5', color: '#1e3a8a', padding: '6px 8px', fontSize: '11px', fontWeight: 'bold', borderBottom: '1px solid #b0b8cc', textAlign: 'center' }}>for PVR AQUACULTURE</div>
+                                    <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '15px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#444' }}>Authorized Signature</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '16px', fontSize: '13px', fontWeight: 'bold', color: '#1e3a8a', fontStyle: 'italic' }}>
+                                Thank You For Business!
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div >
 
     );
